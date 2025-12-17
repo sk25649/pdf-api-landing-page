@@ -59,14 +59,14 @@ export function ApiKeyCard({ initialApiKey }: ApiKeyCardProps) {
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="flex h-full w-full max-w-md flex-col">
       <CardHeader>
         <CardTitle>API Key</CardTitle>
         <CardDescription>
           Use this key to authenticate your API requests
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col space-y-4">
         {apiKey ? (
           <>
             <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export function ApiKeyCard({ initialApiKey }: ApiKeyCardProps) {
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="mt-auto w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Regenerate API Key
                 </Button>

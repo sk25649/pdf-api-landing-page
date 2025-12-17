@@ -30,7 +30,7 @@ export function UsageCard({ current, limit, plan }: UsageCardProps) {
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="flex h-full w-full max-w-md flex-col">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Usage</CardTitle>
@@ -39,7 +39,7 @@ export function UsageCard({ current, limit, plan }: UsageCardProps) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex-1 space-y-4">
         <div className="space-y-1">
           <div className="text-3xl font-bold">
             {current.toLocaleString()} / {limit.toLocaleString()}
@@ -67,7 +67,7 @@ export function UsageCard({ current, limit, plan }: UsageCardProps) {
       </CardContent>
 
       {(isApproachingLimit || isFree) && (
-        <CardFooter>
+        <CardFooter className="mt-auto">
           {isFree ? (
             <Button asChild className="w-full">
               <Link href="/pricing">Upgrade Plan</Link>

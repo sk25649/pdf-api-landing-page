@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,11 +20,16 @@ export const metadata: Metadata = {
   description: "Doc API - Transform your documents",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <body
@@ -31,16 +37,25 @@ export default function RootLayout({
       >
         <header className="border-b">
           <div className="container mx-auto flex h-16 items-center justify-between px-4">
-            <Link href="/" className="text-xl font-bold">
+            <Link href={user ? "/dashboard" : "/"} className="text-xl font-bold">
               Doc API
             </Link>
             <nav>
-              <Link
-                href="/login"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                Log in
-              </Link>
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Log in
+                </Link>
+              )}
             </nav>
           </div>
         </header>
