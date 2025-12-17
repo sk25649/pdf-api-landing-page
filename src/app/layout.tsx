@@ -34,7 +34,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-screen flex-col`}
       >
         <header className="border-b">
           <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -69,7 +69,7 @@ export default async function RootLayout({
             </nav>
           </div>
         </header>
-        {children}
+        <div className="flex-1">{children}</div>
         <footer className="border-t py-12">
           <div className="container mx-auto px-4">
             <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
