@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,7 +38,10 @@ export default async function RootLayout({
       >
         <header className="border-b">
           <div className="container mx-auto flex h-16 items-center justify-between px-4">
-            <Link href={user ? "/dashboard" : "/"} className="text-xl font-bold">
+            <Link
+              href={user ? "/dashboard" : "/"}
+              className="text-xl font-bold"
+            >
               Doc API
             </Link>
             <nav>
@@ -61,6 +65,7 @@ export default async function RootLayout({
         </header>
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
