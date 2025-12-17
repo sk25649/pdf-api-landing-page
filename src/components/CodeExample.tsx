@@ -7,13 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 const examples = {
-  curl: `curl -X POST https://api.docapi.io/v1/pdf \\
+  curl: `curl -X POST https://api.docapi.co/v1/pdf \\
   -H "x-api-key: pk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{"html": "<h1>Hello World</h1>"}' \\
   --output document.pdf`,
 
-  node: `const response = await fetch('https://api.docapi.io/v1/pdf', {
+  node: `const response = await fetch('https://api.docapi.co/v1/pdf', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_xxx',
@@ -27,14 +27,14 @@ const pdf = await response.arrayBuffer();`,
   python: `import requests
 
 response = requests.post(
-    'https://api.docapi.io/v1/pdf',
+    'https://api.docapi.co/v1/pdf',
     headers={'x-api-key': 'pk_live_xxx'},
     json={'html': '<h1>Hello World</h1>'}
 )
 
 pdf = response.content`,
 
-  php: `$response = file_get_contents('https://api.docapi.io/v1/pdf', false,
+  php: `$response = file_get_contents('https://api.docapi.co/v1/pdf', false,
   stream_context_create([
     'http' => [
       'method' => 'POST',

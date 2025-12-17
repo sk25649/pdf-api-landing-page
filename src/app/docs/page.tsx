@@ -22,7 +22,7 @@ export default function DocsPage() {
         <h3>Step 2: Make your first request</h3>
         <CodeBlock
           language="bash"
-          code={`curl -X POST https://api.docapi.io/v1/pdf \\
+          code={`curl -X POST https://api.docapi.co/v1/pdf \\
   -H "x-api-key: pk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{"html": "<h1>Hello World</h1>"}' \\
@@ -69,7 +69,7 @@ export default function DocsPage() {
       <section id="endpoints" className="scroll-mt-20">
         <h2>Endpoints</h2>
         <p>
-          Base URL: <code>https://api.docapi.io</code>
+          Base URL: <code>https://api.docapi.co</code>
         </p>
 
         {/* POST /v1/pdf */}
@@ -104,7 +104,7 @@ export default function DocsPage() {
           <CodeBlock
             language="javascript"
             title="Node.js"
-            code={`const response = await fetch('https://api.docapi.io/v1/pdf', {
+            code={`const response = await fetch('https://api.docapi.co/v1/pdf', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_xxx',
@@ -181,7 +181,7 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
           <h4>Example</h4>
           <CodeBlock
             language="bash"
-            code={`curl https://api.docapi.io/v1/usage \\
+            code={`curl https://api.docapi.co/v1/usage \\
   -H "x-api-key: pk_live_xxx"`}
           />
         </section>
@@ -325,7 +325,7 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
         <h3>cURL</h3>
         <CodeBlock
           language="bash"
-          code={`curl -X POST https://api.docapi.io/v1/pdf \\
+          code={`curl -X POST https://api.docapi.co/v1/pdf \\
   -H "x-api-key: pk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -344,7 +344,7 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
           code={`const fs = require('fs');
 
 async function generatePDF() {
-  const response = await fetch('https://api.docapi.io/v1/pdf', {
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
     method: 'POST',
     headers: {
       'x-api-key': process.env.DOC_API_KEY,
@@ -390,7 +390,7 @@ import os
 
 def generate_pdf():
     response = requests.post(
-        'https://api.docapi.io/v1/pdf',
+        'https://api.docapi.co/v1/pdf',
         headers={
             'x-api-key': os.environ['DOC_API_KEY'],
             'Content-Type': 'application/json'
@@ -450,7 +450,7 @@ $data = [
     'options' => ['format' => 'A4']
 ];
 
-$ch = curl_init('https://api.docapi.io/v1/pdf');
+$ch = curl_init('https://api.docapi.co/v1/pdf');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,

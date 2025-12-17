@@ -67,7 +67,7 @@ export default function Home() {
                       <span className="text-yellow-300">fetch</span>
                       <span className="text-zinc-100">(</span>
                       {"\n"}
-                      <span className="text-green-400">  &apos;https://api.docapi.io/v1/pdf&apos;</span>
+                      <span className="text-green-400">  &apos;https://api.docapi.co/v1/pdf&apos;</span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
                       <span className="text-zinc-100">  {"{"}</span>
