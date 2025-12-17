@@ -1,11 +1,17 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
+  pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 };
 
-export default withSentryConfig(nextConfig, {
+const withMDX = createMDX({
+  extension: /\.mdx?$/,
+});
+
+export default withSentryConfig(withMDX(nextConfig), {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 

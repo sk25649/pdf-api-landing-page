@@ -124,3 +124,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Code block styling for blog posts */
+[data-rehype-pretty-code-figure] {
+  background-color: #09090b !important;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+[data-rehype-pretty-code-figure] pre {
+  background-color: transparent !important;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+[data-rehype-pretty-code-figure] code {
+  background-color: transparent !important;
+}
+
+.prose pre {
+  background-color: #09090b !important;
+}

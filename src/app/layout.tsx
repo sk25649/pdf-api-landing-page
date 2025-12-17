@@ -44,7 +44,13 @@ export default async function RootLayout({
             >
               Doc API
             </Link>
-            <nav>
+            <nav className="flex items-center gap-6">
+              <Link
+                href="/blog"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Blog
+              </Link>
               {user ? (
                 <Link
                   href="/dashboard"

@@ -1,0 +1,161 @@
+---
+title: "How to Generate PDFs in Node.js"
+description: "Learn how to convert HTML to PDF using our simple API with Node.js, including code examples and best practices."
+date: "2024-12-17"
+---
+
+Generating PDFs from HTML is a common requirement for many applications. Whether you're creating invoices, reports, or certificates, having a reliable PDF generation solution is essential. In this guide, we'll show you how to use Doc API to generate PDFs in Node.js.
+
+## Why Use an API for PDF Generation?
+
+Traditional approaches to PDF generation often involve:
+
+- **Heavy dependencies**: Libraries like Puppeteer require Chromium, adding 100MB+ to your deployment
+- **Complex setup**: Configuring headless browsers and managing memory
+- **Scaling issues**: Each PDF generation consumes significant server resources
+
+Using an API like Doc API eliminates these problems by offloading the work to our servers.
+
+## Quick Start
+
+Here's how to generate your first PDF with just a few lines of code:
+
+```javascript
+const response = await fetch('https://api.docapi.co/v1/pdf', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'your-api-key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    html: '<h1>Hello World</h1>'
+  })
+});
+
+const pdf = await response.arrayBuffer();
+```
+
+## Complete Example
+
+Let's build a more complete example that generates an invoice PDF:
+
+```javascript
+import fs from 'fs';
+
+async function generateInvoice(invoiceData) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          .header { border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .invoice-number { color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          .total { font-size: 1.2em; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Invoice</h1>
+          <p class="invoice-number">#${invoiceData.number}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${invoiceData.items.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.price}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p class="total">Total: $${invoiceData.total}</p>
+      </body>
+    </html>
+  `;
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ html })
+  });
+
+  if (!response.ok) {
+    throw new Error(`PDF generation failed: ${response.statusText}`);
+  }
+
+  return response.arrayBuffer();
+}
+
+// Usage
+const invoice = {
+  number: 'INV-001',
+  items: [
+    { name: 'Web Development', quantity: 1, price: 1500 },
+    { name: 'Hosting (1 year)', quantity: 1, price: 200 }
+  ],
+  total: 1700
+};
+
+const pdfBuffer = await generateInvoice(invoice);
+fs.writeFileSync('invoice.pdf', Buffer.from(pdfBuffer));
+```
+
+## Best Practices
+
+### 1. Use CSS for Styling
+
+Our API supports full CSS, including:
+
+- Flexbox and Grid layouts
+- Custom fonts (via web fonts or base64 embedding)
+- Media queries for print-specific styles
+- CSS variables
+
+### 2. Handle Errors Gracefully
+
+Always check the response status and handle errors:
+
+```javascript
+const response = await fetch('https://api.docapi.co/v1/pdf', {
+  // ... options
+});
+
+if (!response.ok) {
+  const error = await response.json();
+  console.error('PDF generation failed:', error.message);
+  throw new Error(error.message);
+}
+```
+
+### 3. Use Environment Variables
+
+Never hardcode your API key:
+
+```javascript
+const apiKey = process.env.DOCAPI_KEY;
+if (!apiKey) {
+  throw new Error('DOCAPI_KEY environment variable is required');
+}
+```
+
+## Next Steps
+
+- [View the full API documentation](/docs)
+- [Get your free API key](/signup)
+- [See pricing plans](/pricing)
+
+Start generating PDFs today with Doc API's simple, reliable API.
