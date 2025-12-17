@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanLimit } from "@/lib/plans";
@@ -5,6 +6,9 @@ import { ApiKeyCard } from "./ApiKeyCard";
 import { UsageCard } from "./UsageCard";
 import { BillingCard } from "./BillingCard";
 import { LogoutButton } from "./LogoutButton";
+import { CheckoutSuccess } from "./CheckoutSuccess";
+
+export const dynamic = "force-dynamic";
 
 function getFirstDayOfMonth(): string {
   const now = new Date();
@@ -57,6 +61,9 @@ export default async function DashboardPage() {
 
   return (
     <main className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-8 px-4 py-8">
+      <Suspense fallback={null}>
+        <CheckoutSuccess />
+      </Suspense>
       <div className="space-y-2 text-center">
         <h1 className="text-4xl font-bold">Welcome to Dashboard</h1>
         <p className="text-muted-foreground">Logged in as: {user.email}</p>

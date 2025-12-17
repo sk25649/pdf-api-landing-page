@@ -81,10 +81,15 @@ export async function createBillingPortalSession(): Promise<
   const headersList = await headers();
   const origin = headersList.get("origin") || "http://localhost:3000";
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: planData.stripe_customer_id,
-    return_url: `${origin}/dashboard`,
-  });
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: planData.stripe_customer_id,
+      return_url: `${origin}/dashboard`,
+    });
 
-  return { url: session.url };
+    return { url: session.url };
+  } catch (error) {
+    console.error("Stripe billing portal error:", error);
+    return { error: "Failed to create billing portal session" };
+  }
 }

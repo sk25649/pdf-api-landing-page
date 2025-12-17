@@ -1,10 +1,15 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 // Use service role key to bypass RLS
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing Supabase environment variables for webhook");
+}
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -51,12 +56,15 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
+        console.log("Checkout session metadata:", session.metadata);
+        console.log("Customer ID:", session.customer);
+
         const userId = session.metadata?.user_id;
         const planName = session.metadata?.plan_name;
         const customerId = session.customer as string;
 
         if (!userId || !planName) {
-          console.error("Missing metadata in checkout session");
+          console.error("Missing metadata in checkout session. Metadata:", session.metadata);
           return NextResponse.json(
             { error: "Missing metadata" },
             { status: 400 }
@@ -64,7 +72,9 @@ export async function POST(request: Request) {
         }
 
         // Update user's plan in database
-        const { error } = await supabaseAdmin.from("user_plans").upsert(
+        console.log(`Attempting to upsert user_plans: user_id=${userId}, plan=${planName}, stripe_customer_id=${customerId}`);
+
+        const { data, error } = await supabaseAdmin.from("user_plans").upsert(
           {
             user_id: userId,
             plan: planName,
@@ -72,7 +82,7 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id" }
-        );
+        ).select();
 
         if (error) {
           console.error("Failed to update user plan:", error);
@@ -82,6 +92,8 @@ export async function POST(request: Request) {
           );
         }
 
+        console.log("Upsert result:", data);
+        revalidatePath("/dashboard");
         console.log(`Checkout completed: User ${userId} upgraded to ${planName}`);
         break;
       }
@@ -109,6 +121,7 @@ export async function POST(request: Request) {
         if (error) {
           console.error("Failed to update subscription:", error);
         } else {
+          revalidatePath("/dashboard");
           console.log(`Subscription updated: Customer ${customerId} changed to ${newPlan}`);
         }
         break;
@@ -130,6 +143,7 @@ export async function POST(request: Request) {
         if (error) {
           console.error("Failed to downgrade user plan:", error);
         } else {
+          revalidatePath("/dashboard");
           console.log(`Subscription deleted: Customer ${customerId} downgraded to free`);
         }
         break;
