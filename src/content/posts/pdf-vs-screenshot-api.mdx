@@ -1,0 +1,298 @@
+---
+title: "PDF vs Screenshot API: Which One Do You Need?"
+description: "Understand the difference between PDF and Screenshot APIs, when to use each, and how to choose the right one for your project."
+date: "2024-12-17"
+author: "Siwan"
+---
+
+# PDF vs Screenshot API: Which One Do You Need?
+
+You need to capture something programmatically. But should you generate a PDF or take a screenshot?
+
+Both convert HTML to a downloadable file. Both use headless browsers under the hood. But they solve different problems.
+
+Here's how to choose.
+
+---
+
+## The Core Difference
+
+|                     | PDF API                        | Screenshot API             |
+| ------------------- | ------------------------------ | -------------------------- |
+| **Output**          | Multi-page document            | Single image               |
+| **Format**          | .pdf                           | .png, .jpg, .webp          |
+| **Best for**        | Documents meant to be read     | Visuals meant to be seen   |
+| **Page breaks**     | Yes, handled automatically     | No concept of pages        |
+| **File size**       | Smaller for text-heavy content | Smaller for simple visuals |
+| **Searchable text** | Yes                            | No (it's an image)         |
+
+---
+
+## When to Use a PDF API
+
+### 1. Invoices and Receipts
+
+PDFs are the standard for financial documents. They're:
+
+- Printable at any size without quality loss
+- Searchable (find that transaction from 6 months ago)
+- Archivable for compliance
+
+```javascript
+const invoice = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: { "x-api-key": "your-key" },
+  body: JSON.stringify({
+    html: invoiceTemplate,
+    options: { format: "A4" },
+  }),
+});
+```
+
+### 2. Reports and Documentation
+
+Multi-page content belongs in PDFs. A 20-page analytics report as a screenshot would be absurd.
+
+### 3. Contracts and Legal Documents
+
+Legal documents need to be:
+
+- Paginated properly
+- Text-selectable for copying clauses
+- Consistent across all devices
+
+### 4. Anything That Gets Printed
+
+If the end user might print it, use PDF. Screenshots pixelate when printed at larger sizes.
+
+---
+
+## When to Use a Screenshot API
+
+### 1. Social Media Previews (Open Graph Images)
+
+When someone shares your link on Twitter or LinkedIn, you need an image — not a PDF.
+
+```javascript
+const ogImage = await fetch("https://api.docapi.co/v1/screenshot", {
+  method: "POST",
+  headers: { "x-api-key": "your-key" },
+  body: JSON.stringify({
+    html: ogTemplate,
+    options: {
+      width: 1200,
+      height: 630,
+      format: "png",
+    },
+  }),
+});
+```
+
+### 2. Website Thumbnails
+
+Link preview tools, bookmarking apps, and dashboards show website thumbnails. These are always images.
+
+### 3. Email Content
+
+Most email clients don't render PDFs inline. But images? They display perfectly.
+
+### 4. App Store / Marketing Assets
+
+Screenshots of your product for landing pages, pitch decks, or the App Store.
+
+### 5. Automated Testing Evidence
+
+QA teams capture screenshots to document bugs or verify UI states.
+
+### 6. Charts and Graphs as Images
+
+Sometimes you need to embed a chart in a doc or email. Exporting as PNG is cleaner than embedding a PDF.
+
+---
+
+## The Hybrid Use Case: PDF with Screenshot Elements
+
+Sometimes you need both.
+
+**Example:** A weekly report PDF that includes a screenshot of a live dashboard.
+
+1. Screenshot the dashboard
+2. Embed the image in your HTML template
+3. Generate the PDF
+
+```javascript
+// Step 1: Capture dashboard
+const dashboardImage = await fetch("https://api.docapi.co/v1/screenshot", {
+  method: "POST",
+  headers: { "x-api-key": "your-key" },
+  body: JSON.stringify({
+    url: "https://app.example.com/dashboard",
+    options: { width: 1200, height: 800 },
+  }),
+});
+
+const imageBase64 = Buffer.from(await dashboardImage.arrayBuffer()).toString(
+  "base64"
+);
+
+// Step 2: Generate PDF with embedded image
+const report = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: { "x-api-key": "your-key" },
+  body: JSON.stringify({
+    html: `
+      <h1>Weekly Report</h1>
+      <p>Dashboard snapshot as of ${new Date().toLocaleDateString()}</p>
+      <img src="data:image/png;base64,${imageBase64}" />
+    `,
+    options: { format: "A4" },
+  }),
+});
+```
+
+---
+
+## Quick Decision Framework
+
+Ask yourself these questions:
+
+### Will it be printed?
+
+→ **PDF**
+
+### Is it multi-page?
+
+→ **PDF**
+
+### Does it need searchable text?
+
+→ **PDF**
+
+### Is it for social sharing?
+
+→ **Screenshot**
+
+### Will it be embedded in another app/email?
+
+→ **Screenshot**
+
+### Is it a visual snapshot of a specific moment?
+
+→ **Screenshot**
+
+---
+
+## Technical Differences
+
+### File Size
+
+| Content Type         | PDF    | PNG     |
+| -------------------- | ------ | ------- |
+| Text-heavy invoice   | ~50KB  | ~200KB  |
+| Simple chart         | ~100KB | ~50KB   |
+| Full webpage capture | ~200KB | ~500KB+ |
+
+PDFs compress text efficiently. Screenshots compress simple graphics better.
+
+### Rendering Time
+
+Screenshots are usually faster — they just capture what's visible.
+
+PDFs take slightly longer because they need to:
+
+- Calculate page breaks
+- Render headers/footers per page
+- Generate the PDF structure
+
+For most use cases, the difference is negligible (both under 2 seconds).
+
+### Resolution
+
+|                    | PDF              | Screenshot          |
+| ------------------ | ---------------- | ------------------- |
+| **Scaling**        | Vector, infinite | Raster, fixed       |
+| **Retina support** | Automatic        | Requires 2x capture |
+| **Print quality**  | Always crisp     | Can pixelate        |
+
+---
+
+## Common Mistakes
+
+### Mistake 1: Using PDFs for Email Thumbnails
+
+Emails can't display PDFs inline. Use screenshots.
+
+### Mistake 2: Using Screenshots for Multi-Page Documents
+
+A 10-page report as a single tall image? Nobody wants to scroll that.
+
+### Mistake 3: Capturing Full-Page Screenshots for Everything
+
+`fullPage: true` creates massive images for long pages. Usually you want a fixed viewport.
+
+### Mistake 4: Forgetting Mobile Dimensions
+
+If your content will be viewed on mobile, set appropriate viewport sizes:
+
+```javascript
+// For mobile screenshot
+options: {
+  width: 390,   // iPhone 14 width
+  height: 844
+}
+```
+
+---
+
+## Pricing Consideration
+
+Most API providers charge per conversion. PDFs and screenshots typically cost the same per call.
+
+But if you're generating thousands:
+
+- Screenshots of simple pages are faster → potentially lower costs on time-based billing
+- PDFs with many pages count as one conversion → better value for long documents
+
+---
+
+## Conclusion
+
+**Use PDF when:**
+
+- Document will be printed, archived, or signed
+- Content spans multiple pages
+- Text needs to be searchable/selectable
+
+**Use Screenshot when:**
+
+- Output is for visual display (social, email, thumbnails)
+- You need a specific viewport capture
+- You're embedding in another image-based context
+
+Most apps eventually need both. That's why we offer both endpoints under one API key.
+
+---
+
+## Try It
+
+Generate your first PDF:
+
+```bash
+curl -X POST https://api.docapi.co/v1/pdf \
+  -H "x-api-key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>Hello PDF</h1>"}' \
+  --output test.pdf
+```
+
+Capture your first screenshot:
+
+```bash
+curl -X POST https://api.docapi.co/v1/screenshot \
+  -H "x-api-key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "options": {"width": 1280, "height": 800}}' \
+  --output test.png
+```
+
+Both take seconds to set up. Pick the right tool for your use case.
