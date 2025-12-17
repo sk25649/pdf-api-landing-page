@@ -30,10 +30,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <header className="border-b">
-          <div className="container mx-auto flex h-16 items-center px-4">
+          <div className="container mx-auto flex h-16 items-center justify-between px-4">
             <Link href="/" className="text-xl font-bold">
               Doc API
             </Link>
+            <nav>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Log in
+              </Link>
+            </nav>
           </div>
         </header>
         {children}
