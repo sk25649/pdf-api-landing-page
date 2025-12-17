@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { CodeExample } from "@/components/CodeExample";
 import { PricingTable } from "@/components/PricingTable";
 
 export default function Home() {
@@ -120,6 +121,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Code Examples Section */}
+      <CodeExample />
 
       {/* Pricing Section */}
       <PricingTable />

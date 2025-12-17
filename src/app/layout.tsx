@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -30,7 +31,9 @@ export default function RootLayout({
       >
         <header className="border-b">
           <div className="container mx-auto flex h-16 items-center px-4">
-            <span className="text-xl font-bold">PDF API</span>
+            <Link href="/" className="text-xl font-bold">
+              PDF API
+            </Link>
           </div>
         </header>
         {children}
