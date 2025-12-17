@@ -5,13 +5,13 @@ export default function DocsPage() {
     <div className="prose prose-zinc max-w-none dark:prose-invert">
       <h1>API Documentation</h1>
       <p className="lead">
-        Everything you need to integrate PDF API into your application.
+        Everything you need to integrate Doc API into your application.
       </p>
 
       {/* Quick Start */}
       <section id="quick-start" className="scroll-mt-20">
         <h2>Quick Start</h2>
-        <p>Get up and running with PDF API in under 5 minutes.</p>
+        <p>Get up and running with Doc API in under 5 minutes.</p>
 
         <h3>Step 1: Sign up and get your API key</h3>
         <p>
@@ -22,7 +22,7 @@ export default function DocsPage() {
         <h3>Step 2: Make your first request</h3>
         <CodeBlock
           language="bash"
-          code={`curl -X POST https://api.pdfapi.io/v1/pdf \\
+          code={`curl -X POST https://api.docapi.io/v1/pdf \\
   -H "x-api-key: pk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{"html": "<h1>Hello World</h1>"}' \\
@@ -69,7 +69,7 @@ export default function DocsPage() {
       <section id="endpoints" className="scroll-mt-20">
         <h2>Endpoints</h2>
         <p>
-          Base URL: <code>https://api.pdfapi.io</code>
+          Base URL: <code>https://api.docapi.io</code>
         </p>
 
         {/* POST /v1/pdf */}
@@ -104,7 +104,7 @@ export default function DocsPage() {
           <CodeBlock
             language="javascript"
             title="Node.js"
-            code={`const response = await fetch('https://api.pdfapi.io/v1/pdf', {
+            code={`const response = await fetch('https://api.docapi.io/v1/pdf', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_xxx',
@@ -181,7 +181,7 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
           <h4>Example</h4>
           <CodeBlock
             language="bash"
-            code={`curl https://api.pdfapi.io/v1/usage \\
+            code={`curl https://api.docapi.io/v1/usage \\
   -H "x-api-key: pk_live_xxx"`}
           />
         </section>
@@ -325,7 +325,7 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
         <h3>cURL</h3>
         <CodeBlock
           language="bash"
-          code={`curl -X POST https://api.pdfapi.io/v1/pdf \\
+          code={`curl -X POST https://api.docapi.io/v1/pdf \\
   -H "x-api-key: pk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -344,10 +344,10 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
           code={`const fs = require('fs');
 
 async function generatePDF() {
-  const response = await fetch('https://api.pdfapi.io/v1/pdf', {
+  const response = await fetch('https://api.docapi.io/v1/pdf', {
     method: 'POST',
     headers: {
-      'x-api-key': process.env.PDF_API_KEY,
+      'x-api-key': process.env.DOC_API_KEY,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -390,9 +390,9 @@ import os
 
 def generate_pdf():
     response = requests.post(
-        'https://api.pdfapi.io/v1/pdf',
+        'https://api.docapi.io/v1/pdf',
         headers={
-            'x-api-key': os.environ['PDF_API_KEY'],
+            'x-api-key': os.environ['DOC_API_KEY'],
             'Content-Type': 'application/json'
         },
         json={
@@ -430,7 +430,7 @@ generate_pdf()`}
           language="php"
           code={`<?php
 
-$apiKey = getenv('PDF_API_KEY');
+$apiKey = getenv('DOC_API_KEY');
 
 $data = [
     'html' => '
@@ -450,7 +450,7 @@ $data = [
     'options' => ['format' => 'A4']
 ];
 
-$ch = curl_init('https://api.pdfapi.io/v1/pdf');
+$ch = curl_init('https://api.docapi.io/v1/pdf');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,

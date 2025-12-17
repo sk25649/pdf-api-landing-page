@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PDF API",
-  description: "PDF API - Transform your documents",
+  title: "Doc API",
+  description: "Doc API - Transform your documents",
 };
 
 export default function RootLayout({
@@ -32,7 +32,7 @@ export default function RootLayout({
         <header className="border-b">
           <div className="container mx-auto flex h-16 items-center px-4">
             <Link href="/" className="text-xl font-bold">
-              PDF API
+              Doc API
             </Link>
           </div>
         </header>

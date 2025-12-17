@@ -15,11 +15,11 @@ export default function Home() {
             <div className="flex-1 text-center md:text-left">
               <div className="mb-6 inline-flex items-center rounded-full border bg-muted/50 px-4 py-1.5 text-sm font-medium">
                 <span className="mr-2">🚀</span>
-                Developer-first PDF API
+                Developer-first Doc API
               </div>
 
               <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-                HTML to PDF API{" "}
+                HTML to Doc API{" "}
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   for developers
                 </span>
@@ -67,7 +67,7 @@ export default function Home() {
                       <span className="text-yellow-300">fetch</span>
                       <span className="text-zinc-100">(</span>
                       {"\n"}
-                      <span className="text-green-400">  &apos;https://api.pdfapi.io/v1/pdf&apos;</span>
+                      <span className="text-green-400">  &apos;https://api.docapi.io/v1/pdf&apos;</span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
                       <span className="text-zinc-100">  {"{"}</span>
