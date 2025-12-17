@@ -15,11 +15,11 @@ export default function Home() {
             <div className="flex-1 text-center md:text-left">
               <div className="mb-6 inline-flex items-center rounded-full border bg-muted/50 px-4 py-1.5 text-sm font-medium">
                 <span className="mr-2">🚀</span>
-                Developer-first Doc API
+                Developer-first PDF API
               </div>
 
               <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-                HTML to Doc API{" "}
+                HTML to PDF API{" "}
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   for developers
                 </span>
@@ -59,7 +59,9 @@ export default function Home() {
                 <div className="overflow-x-auto p-4">
                   <pre className="text-sm leading-relaxed">
                     <code>
-                      <span className="text-zinc-500">{"// Generate a PDF from HTML"}</span>
+                      <span className="text-zinc-500">
+                        {"// Generate a PDF from HTML"}
+                      </span>
                       {"\n"}
                       <span className="text-purple-400">const</span>
                       <span className="text-zinc-100"> response </span>
@@ -67,42 +69,55 @@ export default function Home() {
                       <span className="text-yellow-300">fetch</span>
                       <span className="text-zinc-100">(</span>
                       {"\n"}
-                      <span className="text-green-400">  &apos;https://api.docapi.co/v1/pdf&apos;</span>
+                      <span className="text-green-400">
+                        {" "}
+                        &apos;https://api.docapi.co/v1/pdf&apos;
+                      </span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100">  {"{"}</span>
+                      <span className="text-zinc-100"> {"{"}</span>
                       {"\n"}
-                      <span className="text-zinc-100">    method: </span>
+                      <span className="text-zinc-100"> method: </span>
                       <span className="text-green-400">&apos;POST&apos;</span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100">    headers: {"{"}</span>
+                      <span className="text-zinc-100"> headers: {"{"}</span>
                       {"\n"}
-                      <span className="text-zinc-100">      </span>
-                      <span className="text-green-400">&apos;x-api-key&apos;</span>
+                      <span className="text-zinc-100"> </span>
+                      <span className="text-green-400">
+                        &apos;x-api-key&apos;
+                      </span>
                       <span className="text-zinc-100">: </span>
-                      <span className="text-green-400">&apos;pk_live_xxx&apos;</span>
+                      <span className="text-green-400">
+                        &apos;pk_live_xxx&apos;
+                      </span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100">      </span>
-                      <span className="text-green-400">&apos;Content-Type&apos;</span>
+                      <span className="text-zinc-100"> </span>
+                      <span className="text-green-400">
+                        &apos;Content-Type&apos;
+                      </span>
                       <span className="text-zinc-100">: </span>
-                      <span className="text-green-400">&apos;application/json&apos;</span>
+                      <span className="text-green-400">
+                        &apos;application/json&apos;
+                      </span>
                       {"\n"}
-                      <span className="text-zinc-100">    {"}"},</span>
+                      <span className="text-zinc-100"> {"}"},</span>
                       {"\n"}
-                      <span className="text-zinc-100">    body: </span>
+                      <span className="text-zinc-100"> body: </span>
                       <span className="text-yellow-300">JSON</span>
                       <span className="text-zinc-100">.</span>
                       <span className="text-yellow-300">stringify</span>
                       <span className="text-zinc-100">({"{"}</span>
                       {"\n"}
-                      <span className="text-zinc-100">      html: </span>
-                      <span className="text-green-400">&apos;&lt;h1&gt;Hello World&lt;/h1&gt;&apos;</span>
+                      <span className="text-zinc-100"> html: </span>
+                      <span className="text-green-400">
+                        &apos;&lt;h1&gt;Hello World&lt;/h1&gt;&apos;
+                      </span>
                       {"\n"}
-                      <span className="text-zinc-100">    {"}"})</span>
+                      <span className="text-zinc-100"> {"}"})</span>
                       {"\n"}
-                      <span className="text-zinc-100">  {"}"}</span>
+                      <span className="text-zinc-100"> {"}"}</span>
                       {"\n"}
                       <span className="text-zinc-100">);</span>
                     </code>
