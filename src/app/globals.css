@@ -146,3 +146,26 @@
 .prose pre {
   background-color: #09090b !important;
 }
+
+/* Table styling for blog posts */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.prose th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.prose tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
