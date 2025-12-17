@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -7,8 +8,8 @@ export default function Home() {
       <p className="mt-4 text-lg text-muted-foreground">
         Transform your documents with ease
       </p>
-      <Button className="mt-8" size="lg">
-        Get Started
+      <Button className="mt-8" size="lg" asChild>
+        <Link href="/login">Get Started</Link>
       </Button>
     </main>
   );
