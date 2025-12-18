@@ -104,7 +104,7 @@ export function PricingTable() {
                 </div>
               )}
 
-              <CardHeader className={plan.highlighted ? "pt-8" : ""}>
+              <CardHeader className="pt-8">
                 <CardTitle className="text-xl">{plan.name}</CardTitle>
                 <CardDescription>
                   <span className="text-3xl font-bold text-foreground">
