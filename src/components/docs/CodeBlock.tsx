@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { Highlight, themes } from "prism-react-renderer";
 import { Button } from "@/components/ui/button";
 
 interface CodeBlockProps {
@@ -10,7 +11,16 @@ interface CodeBlockProps {
   title?: string;
 }
 
-export function CodeBlock({ code, language, title }: CodeBlockProps) {
+const languageMap: Record<string, string> = {
+  bash: "bash",
+  javascript: "javascript",
+  python: "python",
+  php: "php",
+  json: "json",
+  http: "http",
+};
+
+export function CodeBlock({ code, language = "bash", title }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -18,6 +28,8 @@ export function CodeBlock({ code, language, title }: CodeBlockProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const prismLanguage = languageMap[language] || language;
 
   return (
     <div className="relative my-4 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
@@ -39,9 +51,22 @@ export function CodeBlock({ code, language, title }: CodeBlockProps) {
         )}
       </Button>
       <div className="overflow-x-auto p-4">
-        <pre className="text-sm leading-relaxed">
-          <code className="font-mono text-zinc-100">{code}</code>
-        </pre>
+        <Highlight theme={themes.nightOwl} code={code} language={prismLanguage}>
+          {({ style, tokens, getLineProps, getTokenProps }) => (
+            <pre
+              className="text-sm leading-relaxed font-mono"
+              style={{ ...style, background: "transparent" }}
+            >
+              {tokens.map((line, i) => (
+                <div key={i} {...getLineProps({ line })}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </div>
+              ))}
+            </pre>
+          )}
+        </Highlight>
       </div>
     </div>
   );
