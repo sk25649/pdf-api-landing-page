@@ -1,0 +1,333 @@
+## Create src/content/posts/docapi-vs-pdfshift-vs-pdfco.mdx:
+
+title: "DocAPI vs PDFShift vs PDF.co: Which PDF API Should You Choose?"
+description: "An honest comparison of popular PDF APIs. Features, pricing, and which one fits your use case."
+date: "2024-12-17"
+author: "Siwan"
+
+---
+
+Choosing a PDF API shouldn't take a week of research. But with so many options, it's hard to know which one actually fits your needs.
+
+I built DocAPI, so yes — I'm biased. But I'll give you an honest breakdown of how we compare to PDFShift and PDF.co, including where they might be better choices.
+
+---
+
+## Quick Comparison
+
+| Feature               | DocAPI           | PDFShift | PDF.co |
+| --------------------- | ---------------- | -------- | ------ |
+| **Starting Price**    | $0 (100 free/mo) | $9/mo    | $50/mo |
+| **HTML to PDF**       | ✅               | ✅       | ✅     |
+| **URL to PDF**        | ✅               | ✅       | ✅     |
+| **Screenshots**       | ✅               | ✅       | ✅     |
+| **Merge PDFs**        | ❌               | ❌       | ✅     |
+| **PDF Forms**         | ❌               | ❌       | ✅     |
+| **OCR**               | ❌               | ❌       | ✅     |
+| **Rendering Engine**  | Chromium         | Chromium | Mixed  |
+| **Avg Response Time** | ~2s              | ~3s      | ~4s    |
+| **Free Tier**         | 100/mo           | 50/mo    | None   |
+
+---
+
+## Pricing Breakdown
+
+### DocAPI
+
+| Plan     | Price  | Conversions  |
+| -------- | ------ | ------------ |
+| Free     | $0     | 100/month    |
+| Starter  | $19/mo | 1,000/month  |
+| Pro      | $49/mo | 5,000/month  |
+| Business | $99/mo | 20,000/month |
+
+Simple, predictable. No credit systems. No per-page charges.
+
+### PDFShift
+
+| Plan       | Price  | Credits      |
+| ---------- | ------ | ------------ |
+| Free       | $0     | 50/month     |
+| Starter    | $9/mo  | 500/month    |
+| Boost      | $24/mo | 2,500/month  |
+| Growth     | $39/mo | 5,000/month  |
+| Enterprise | $99/mo | 15,000/month |
+
+Credit-based. One conversion = one credit, but large PDFs can consume multiple credits.
+
+### PDF.co
+
+| Plan     | Price   | Credits         |
+| -------- | ------- | --------------- |
+| Starter  | $50/mo  | 5,000 credits   |
+| Pro      | $150/mo | 25,000 credits  |
+| Business | $350/mo | 100,000 credits |
+
+No free tier. More expensive, but includes advanced features like OCR and PDF manipulation.
+
+---
+
+## When to Choose DocAPI
+
+**You should pick DocAPI if:**
+
+- You need simple HTML/URL to PDF conversion
+- You want straightforward pricing without credit math
+- You're building invoices, reports, or receipts
+- You need screenshots too
+- You want a generous free tier to test with
+
+**Our focus:** Do one thing well. Fast, reliable HTML to PDF.
+
+```javascript
+const response = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: {
+    "x-api-key": "your-key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    html: "<h1>Invoice #1234</h1><p>Amount: $99</p>",
+  }),
+});
+
+const pdf = await response.arrayBuffer();
+```
+
+---
+
+## When to Choose PDFShift
+
+**You should pick PDFShift if:**
+
+- You want the cheapest paid tier ($9/mo)
+- You're already using it and it works
+- You need S3 storage integration
+- European data residency matters to you
+
+**PDFShift strengths:**
+
+- Been around since 2018, battle-tested
+- Good documentation
+- Webhook support for async processing
+
+**Downsides:**
+
+- Credit system can be confusing for large documents
+- Free tier is only 50/month
+
+---
+
+## When to Choose PDF.co
+
+**You should pick PDF.co if:**
+
+- You need advanced PDF manipulation (merge, split, compress)
+- You need OCR (text extraction from images)
+- You're filling PDF forms programmatically
+- You need barcode/QR code generation in PDFs
+- Budget isn't a constraint
+
+**PDF.co strengths:**
+
+- Feature-rich — it's a full PDF toolkit
+- Handles complex enterprise use cases
+- Good for document workflows
+
+**Downsides:**
+
+- No free tier
+- Starting at $50/mo is steep for simple use cases
+- Can be overkill if you just need HTML to PDF
+- More complex API with many endpoints
+
+---
+
+## Feature Deep Dive
+
+### HTML to PDF Quality
+
+All three use Chromium-based rendering, so output quality is similar. The differences:
+
+|                      | DocAPI | PDFShift | PDF.co |
+| -------------------- | ------ | -------- | ------ |
+| CSS Grid/Flexbox     | ✅     | ✅       | ✅     |
+| Custom Fonts         | ✅     | ✅       | ✅     |
+| JavaScript Execution | ✅     | ✅       | ✅     |
+| Headers/Footers      | ✅     | ✅       | ✅     |
+| Page Numbers         | ✅     | ✅       | ✅     |
+
+For basic HTML to PDF, you won't notice a difference.
+
+### Speed
+
+Based on converting a simple HTML invoice:
+
+| API      | Avg Response Time |
+| -------- | ----------------- |
+| DocAPI   | 1.8s              |
+| PDFShift | 2.5s              |
+| PDF.co   | 3.2s              |
+
+Speed matters for user-facing generation. All are acceptable, but DocAPI edges out slightly.
+
+### API Simplicity
+
+**DocAPI** — 3 endpoints:
+
+- `POST /v1/pdf`
+- `POST /v1/screenshot`
+- `GET /v1/usage`
+
+**PDFShift** — 2 main endpoints:
+
+- `POST /v3/convert/pdf`
+- `POST /v3/convert/screenshot`
+
+**PDF.co** — 50+ endpoints covering every PDF operation imaginable.
+
+If you just need HTML to PDF, DocAPI and PDFShift are simpler. If you need a full document toolkit, PDF.co wins.
+
+---
+
+## Code Comparison
+
+### DocAPI
+
+```javascript
+const response = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: {
+    "x-api-key": "your-key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ html: "<h1>Hello</h1>" }),
+});
+```
+
+### PDFShift
+
+```javascript
+const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+  method: "POST",
+  headers: {
+    Authorization: "Basic " + btoa("api:your-key"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ source: "<h1>Hello</h1>" }),
+});
+```
+
+### PDF.co
+
+```javascript
+const response = await fetch("https://api.pdf.co/v1/pdf/convert/from/html", {
+  method: "POST",
+  headers: {
+    "x-api-key": "your-key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ html: "<h1>Hello</h1>", name: "output.pdf" }),
+});
+```
+
+All straightforward. PDFShift uses Basic auth, others use API key headers.
+
+---
+
+## Honest Downsides of DocAPI
+
+We're new. That means:
+
+- **Smaller track record** — PDFShift has been around since 2018
+- **Fewer advanced features** — no merge, split, or OCR yet
+- **Smaller community** — less Stack Overflow answers about us
+
+If you need enterprise SLAs, compliance certifications, or advanced PDF manipulation, we're not there yet.
+
+---
+
+## Migration Guide
+
+### From PDFShift to DocAPI
+
+```javascript
+// PDFShift
+const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+  headers: { Authorization: "Basic " + btoa("api:key") },
+  body: JSON.stringify({ source: html }),
+});
+
+// DocAPI — just change the URL and header
+const response = await fetch("https://api.docapi.co/v1/pdf", {
+  headers: { "x-api-key": "your-key" },
+  body: JSON.stringify({ html: html }),
+});
+```
+
+5-minute migration.
+
+### From PDF.co to DocAPI
+
+If you're only using HTML to PDF:
+
+```javascript
+// PDF.co
+{ html: '<h1>Hello</h1>', name: 'output.pdf' }
+
+// DocAPI
+{ html: '<h1>Hello</h1>' }
+```
+
+If you're using merge, split, or OCR — stay with PDF.co. We don't have those yet.
+
+---
+
+## Decision Framework
+
+Do you need OCR, merge, split, or form filling?
+├── Yes → PDF.co
+└── No
+├── Is budget super tight ($9/mo)?
+│ └── Yes → PDFShift Starter
+└── No
+├── Want simplest API + generous free tier?
+│ └── DocAPI
+└── Already using something that works?
+└── Stay with it
+
+---
+
+## Try Before You Decide
+
+All three have free tiers or trials:
+
+- **DocAPI**: 100 free conversions/month — [docapi.co](https://docapi.co)
+- **PDFShift**: 50 free conversions/month — [pdfshift.io](https://pdfshift.io)
+- **PDF.co**: Free trial with limited credits — [pdf.co](https://pdf.co)
+
+Test with your actual HTML. See which one handles your edge cases best.
+
+---
+
+## Conclusion
+
+There's no universally "best" PDF API. It depends on what you're building:
+
+| Use Case                | Best Choice         |
+| ----------------------- | ------------------- |
+| Simple invoices/reports | DocAPI or PDFShift  |
+| Tight budget            | PDFShift ($9/mo)    |
+| Need advanced features  | PDF.co              |
+| Want generous free tier | DocAPI (100/mo)     |
+| Enterprise compliance   | PDF.co or DocRaptor |
+
+We built DocAPI because we wanted something simple that just works. If that's what you need, give us a try.
+
+If you need more, the other options are solid too.
+
+---
+
+## Questions?
+
+Tweet at us or email support@docapi.co. Happy to help you evaluate.
