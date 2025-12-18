@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CheckoutButton } from "./CheckoutButton";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple, transparent pricing for Doc API. Start free with 100 API calls/month. Scale as you grow with plans starting at $19/month.",
+  openGraph: {
+    title: "Pricing - Doc API",
+    description:
+      "Simple, transparent pricing for Doc API. Start free with 100 API calls/month.",
+  },
+};
 
 const plans = [
   {

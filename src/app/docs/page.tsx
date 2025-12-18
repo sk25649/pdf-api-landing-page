@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { CodeBlock } from "@/components/docs/CodeBlock";
+
+export const metadata: Metadata = {
+  title: "Documentation",
+  description:
+    "Complete API documentation for Doc API. Learn how to generate PDFs and screenshots from HTML with code examples in cURL, Node.js, Python, and PHP.",
+  openGraph: {
+    title: "API Documentation - Doc API",
+    description:
+      "Complete API documentation for Doc API. Generate PDFs and screenshots from HTML.",
+  },
+};
 
 export default function DocsPage() {
   return (

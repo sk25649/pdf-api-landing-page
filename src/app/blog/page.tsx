@@ -3,11 +3,11 @@ import { getAllPosts } from "@/lib/blog";
 import { PostCard } from "@/components/blog/PostCard";
 
 export const metadata: Metadata = {
-  title: "Blog | Doc API",
+  title: "Blog",
   description:
-    "Learn about PDF generation, HTML to PDF conversion, and API best practices.",
+    "Learn about PDF generation, HTML to PDF conversion, and API best practices. Tips, tutorials, and updates from Doc API.",
   openGraph: {
-    title: "Blog | Doc API",
+    title: "Blog - Doc API",
     description:
       "Learn about PDF generation, HTML to PDF conversion, and API best practices.",
   },

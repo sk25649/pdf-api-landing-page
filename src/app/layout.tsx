@@ -16,9 +16,64 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://www.docapi.co";
+
 export const metadata: Metadata = {
-  title: "Doc API",
-  description: "Doc API - Transform your documents",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Doc API - HTML to PDF API for Developers",
+    template: "%s | Doc API",
+  },
+  description:
+    "Simple HTML to PDF API. Generate PDFs and screenshots programmatically in seconds. Developer-friendly, fair pricing, no complex setup.",
+  keywords: [
+    "PDF API",
+    "HTML to PDF",
+    "PDF generation",
+    "screenshot API",
+    "document API",
+    "PDF converter",
+    "HTML to PDF API",
+    "generate PDF",
+    "PDF service",
+  ],
+  authors: [{ name: "Doc API" }],
+  creator: "Doc API",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "Doc API",
+    title: "Doc API - HTML to PDF API for Developers",
+    description:
+      "Simple HTML to PDF API. Generate PDFs and screenshots programmatically in seconds. Developer-friendly, fair pricing, no complex setup.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Doc API - HTML to PDF API",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Doc API - HTML to PDF API for Developers",
+    description:
+      "Simple HTML to PDF API. Generate PDFs and screenshots programmatically in seconds.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default async function RootLayout({
