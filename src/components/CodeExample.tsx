@@ -121,7 +121,10 @@ export function CodeExample() {
                             {tokens.map((line, i) => (
                               <div key={i} {...getLineProps({ line })}>
                                 {line.map((token, key) => (
-                                  <span key={key} {...getTokenProps({ token })} />
+                                  <span
+                                    key={key}
+                                    {...getTokenProps({ token })}
+                                  />
                                 ))}
                               </div>
                             ))}

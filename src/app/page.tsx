@@ -68,58 +68,56 @@ export default function Home() {
                       <span className="text-purple-400">= await </span>
                       <span className="text-yellow-300">fetch</span>
                       <span className="text-zinc-100">(</span>
-                      {"\n"}
                       <span className="text-green-400">
-                        {" "}
-                        &apos;https://api.docapi.co/v1/pdf&apos;
+                        &quot;https://api.docapi.co/v1/pdf&quot;
                       </span>
+                      <span className="text-zinc-100">, {"{"}</span>
+                      {"\n"}
+                      <span className="text-zinc-100">{"  "}method: </span>
+                      <span className="text-green-400">&quot;POST&quot;</span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100"> {"{"}</span>
+                      <span className="text-zinc-100">
+                        {"  "}headers: {"{"}
+                      </span>
                       {"\n"}
-                      <span className="text-zinc-100"> method: </span>
-                      <span className="text-green-400">&apos;POST&apos;</span>
-                      <span className="text-zinc-100">,</span>
-                      {"\n"}
-                      <span className="text-zinc-100"> headers: {"{"}</span>
-                      {"\n"}
-                      <span className="text-zinc-100"> </span>
+                      <span className="text-zinc-100">{"    "}</span>
                       <span className="text-green-400">
-                        &apos;x-api-key&apos;
+                        &quot;x-api-key&quot;
                       </span>
                       <span className="text-zinc-100">: </span>
                       <span className="text-green-400">
-                        &apos;pk_live_xxx&apos;
+                        &quot;pk_live_xxx&quot;
                       </span>
                       <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100"> </span>
+                      <span className="text-zinc-100">{"    "}</span>
                       <span className="text-green-400">
-                        &apos;Content-Type&apos;
+                        &quot;Content-Type&quot;
                       </span>
                       <span className="text-zinc-100">: </span>
                       <span className="text-green-400">
-                        &apos;application/json&apos;
+                        &quot;application/json&quot;
                       </span>
+                      <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100"> {"}"},</span>
+                      <span className="text-zinc-100">{"  },"}</span>
                       {"\n"}
-                      <span className="text-zinc-100"> body: </span>
+                      <span className="text-zinc-100">{"  "}body: </span>
                       <span className="text-yellow-300">JSON</span>
                       <span className="text-zinc-100">.</span>
                       <span className="text-yellow-300">stringify</span>
                       <span className="text-zinc-100">({"{"}</span>
                       {"\n"}
-                      <span className="text-zinc-100"> html: </span>
+                      <span className="text-zinc-100">{"    "}html: </span>
                       <span className="text-green-400">
-                        &apos;&lt;h1&gt;Hello World&lt;/h1&gt;&apos;
+                        &quot;&lt;h1&gt;Hello World&lt;/h1&gt;&quot;
                       </span>
+                      <span className="text-zinc-100">,</span>
                       {"\n"}
-                      <span className="text-zinc-100"> {"}"})</span>
+                      <span className="text-zinc-100">{"  }),"}</span>
                       {"\n"}
-                      <span className="text-zinc-100"> {"}"}</span>
-                      {"\n"}
-                      <span className="text-zinc-100">);</span>
+                      <span className="text-zinc-100">{"});"}</span>
                     </code>
                   </pre>
                 </div>
