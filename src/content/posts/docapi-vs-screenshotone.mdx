@@ -1,0 +1,302 @@
+---
+title: "DocAPI vs ScreenshotOne: Which API Should You Choose?"
+description: "A fair comparison between DocAPI and ScreenshotOne. Learn when to use each API for your PDF and screenshot needs."
+date: "2024-12-17"
+author: "Siwan"
+---
+
+DocAPI and ScreenshotOne both help you capture web content programmatically. But they solve different problems.
+
+I built DocAPI, so I'm biased. But I'll give you a fair comparison so you can pick the right tool.
+
+---
+
+## Quick Comparison
+
+| Feature                    | DocAPI           | ScreenshotOne    |
+| -------------------------- | ---------------- | ---------------- |
+| **Primary Focus**          | PDF generation   | Screenshots      |
+| **HTML to PDF**            | ✅               | ❌               |
+| **URL to PDF**             | ✅               | ❌               |
+| **URL to Screenshot**      | ✅               | ✅               |
+| **HTML to Screenshot**     | ✅               | ✅               |
+| **Video capture**          | ❌               | ✅               |
+| **Scrolling screenshots**  | ❌               | ✅               |
+| **Cookie banner blocking** | ❌               | ✅               |
+| **Dark mode rendering**    | ❌               | ✅               |
+| **Starting Price**         | $0 (100 free/mo) | $0 (100 free/mo) |
+| **Paid Plans From**        | $19/mo           | $17/mo           |
+
+---
+
+## What Each Tool Does Best
+
+### DocAPI: Built for Documents
+
+DocAPI is designed for generating PDFs. If you need to create:
+
+- Invoices and receipts
+- Reports and documentation
+- Contracts and proposals
+- Any multi-page document
+
+DocAPI is the better choice. We also do screenshots, but PDFs are our focus.
+
+```javascript
+// Generate a PDF with DocAPI
+const response = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: {
+    "x-api-key": "your-key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    html: "<h1>Invoice #1234</h1><p>Total: $99</p>",
+    options: { format: "A4" },
+  }),
+});
+
+const pdf = await response.arrayBuffer();
+```
+
+### ScreenshotOne: Built for Screenshots
+
+ScreenshotOne is laser-focused on screenshots. They've spent 3+ years perfecting:
+
+- Cookie banner blocking
+- Lazy-load handling
+- Full-page scrolling captures
+- Video rendering
+- Dark mode detection
+
+If screenshots are your core need, ScreenshotOne has more advanced features.
+
+```javascript
+// Take a screenshot with ScreenshotOne
+const response = await fetch("https://api.screenshotone.com/take", {
+  method: "GET",
+  params: {
+    url: "https://example.com",
+    access_key: "your-key",
+  },
+});
+```
+
+---
+
+## Pricing Comparison
+
+### DocAPI
+
+| Plan     | Price  | Conversions  |
+| -------- | ------ | ------------ |
+| Free     | $0     | 100/month    |
+| Starter  | $19/mo | 1,000/month  |
+| Pro      | $49/mo | 5,000/month  |
+| Business | $99/mo | 20,000/month |
+
+Simple per-conversion pricing. PDFs and screenshots count the same.
+
+### ScreenshotOne
+
+| Plan       | Price  | Screenshots  |
+| ---------- | ------ | ------------ |
+| Free       | $0     | 100/month    |
+| Starter    | $17/mo | 1,500/month  |
+| Growth     | $39/mo | 6,000/month  |
+| Enterprise | $99/mo | 20,000/month |
+
+ScreenshotOne is slightly cheaper per screenshot, especially on higher tiers.
+
+---
+
+## When to Choose DocAPI
+
+**Choose DocAPI if you need:**
+
+- PDF generation (our main strength)
+- Both PDFs and screenshots from one API
+- Simple, straightforward API
+- Documents with page breaks, headers, footers
+
+**Common DocAPI use cases:**
+
+- Invoice generation
+- Report exports
+- Contract creation
+- Receipt generation
+- Documentation exports
+
+---
+
+## When to Choose ScreenshotOne
+
+**Choose ScreenshotOne if you need:**
+
+- Advanced screenshot features only
+- Cookie banner blocking
+- Full-page scrolling screenshots
+- Video capture of websites
+- Dark mode rendering
+- Geolocation-based screenshots
+
+**Common ScreenshotOne use cases:**
+
+- Website galleries and directories
+- Social media preview images
+- Competitor monitoring
+- Visual regression testing
+- Link preview thumbnails
+
+---
+
+## Feature Deep Dive
+
+### PDF Generation
+
+|                    | DocAPI | ScreenshotOne |
+| ------------------ | ------ | ------------- |
+| HTML to PDF        | ✅     | ❌            |
+| URL to PDF         | ✅     | ❌            |
+| Custom page size   | ✅     | ❌            |
+| Headers/Footers    | ✅     | ❌            |
+| Page numbers       | ✅     | ❌            |
+| Multi-page support | ✅     | ❌            |
+
+**Winner: DocAPI** — ScreenshotOne doesn't do PDFs.
+
+### Screenshot Quality
+
+|                   | DocAPI | ScreenshotOne |
+| ----------------- | ------ | ------------- |
+| Basic screenshots | ✅     | ✅            |
+| Full-page scroll  | ❌     | ✅            |
+| Cookie blocking   | ❌     | ✅            |
+| Ad blocking       | ❌     | ✅            |
+| Dark mode         | ❌     | ✅            |
+| Retina/HiDPI      | ✅     | ✅            |
+
+**Winner: ScreenshotOne** — They've specialized in this for 3+ years.
+
+### API Simplicity
+
+|                | DocAPI         | ScreenshotOne        |
+| -------------- | -------------- | -------------------- |
+| Endpoints      | 3              | 1 (with many params) |
+| Auth method    | API key header | Query param          |
+| Response       | Binary         | Binary or URL        |
+| Learning curve | 5 minutes      | 10 minutes           |
+
+**Winner: Tie** — Both are simple. ScreenshotOne has more options, which means more to learn but more flexibility.
+
+---
+
+## Code Comparison
+
+### Screenshot Capture
+
+**DocAPI:**
+
+```javascript
+const response = await fetch("https://api.docapi.co/v1/screenshot", {
+  method: "POST",
+  headers: {
+    "x-api-key": "your-key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    url: "https://example.com",
+    options: { width: 1280, height: 800 },
+  }),
+});
+```
+
+**ScreenshotOne:**
+
+```javascript
+const params = new URLSearchParams({
+  access_key: "your-key",
+  url: "https://example.com",
+  viewport_width: 1280,
+  viewport_height: 800,
+  block_cookie_banners: true,
+  block_ads: true,
+});
+
+const response = await fetch(`https://api.screenshotone.com/take?${params}`);
+```
+
+ScreenshotOne offers more parameters out of the box.
+
+---
+
+## Honest Assessment
+
+### Where DocAPI Wins
+
+- **PDF generation** — ScreenshotOne simply doesn't offer this
+- **Combined offering** — One API for both PDFs and screenshots
+- **Simpler pricing** — Fewer tiers, easier to understand
+
+### Where ScreenshotOne Wins
+
+- **Screenshot features** — Cookie blocking, scrolling, video, dark mode
+- **Maturity** — 3+ years of development and edge case handling
+- **Slight price advantage** — More screenshots per dollar on higher tiers
+
+### Where We're Equal
+
+- **Free tier** — Both offer 100/month
+- **API simplicity** — Both are easy to integrate
+- **Reliability** — Both use Chromium-based rendering
+
+---
+
+## Can You Use Both?
+
+Yes, and some teams do.
+
+A common pattern:
+
+- **DocAPI** for PDF generation (invoices, reports)
+- **ScreenshotOne** for advanced screenshots (website galleries, monitoring)
+
+There's nothing wrong with using the best tool for each job.
+
+---
+
+## The Honest Truth
+
+If you only need screenshots with advanced features like cookie blocking and full-page scrolling, **ScreenshotOne is the better choice**. They've been at it longer and have more polish.
+
+If you need PDF generation, or you want both PDFs and basic screenshots from one provider, **DocAPI is the better choice**.
+
+I built DocAPI because I needed a simple PDF API. Screenshots were added because many users needed both. But I won't pretend we have screenshot feature parity with a tool that's been screenshot-focused for 3+ years.
+
+---
+
+## Try Both
+
+Both have free tiers. Test with your actual use case:
+
+- **DocAPI**: 100 free conversions/month — [docapi.co](https://docapi.co)
+- **ScreenshotOne**: 100 free screenshots/month — [screenshotone.com](https://screenshotone.com)
+
+---
+
+## Quick Decision
+
+| Your Need                 | Best Choice   |
+| ------------------------- | ------------- |
+| PDF generation            | DocAPI        |
+| Advanced screenshots      | ScreenshotOne |
+| Both PDFs and screenshots | DocAPI        |
+| Cookie/ad blocking        | ScreenshotOne |
+| Video capture             | ScreenshotOne |
+| Simplest pricing          | DocAPI        |
+
+---
+
+## Questions?
+
+Tweet at us or email support@docapi.co. Happy to help you evaluate.
