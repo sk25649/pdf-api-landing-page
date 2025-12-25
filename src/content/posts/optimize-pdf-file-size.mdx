@@ -1,0 +1,450 @@
+---
+title: "Optimizing PDF File Size Without Losing Quality"
+description: "Practical techniques to reduce PDF file size while maintaining visual quality. Learn about image optimization, font subsetting, and efficient HTML practices."
+date: "2024-12-25"
+author: "Siwan"
+---
+
+A 500KB invoice that should be 50KB. A 10MB report that makes email servers complain. Large PDFs slow down downloads, eat storage, and frustrate users. The good news: most PDF bloat is preventable.
+
+This guide covers practical techniques to generate smaller PDFs without sacrificing quality.
+
+---
+
+## Why PDFs Get Large
+
+PDF file size comes from three main sources:
+
+1. **Images** (usually the biggest culprit)
+2. **Embedded fonts**
+3. **Redundant or inefficient content**
+
+Understanding what's bloating your PDF is the first step to fixing it.
+
+---
+
+## Image Optimization
+
+Images are responsible for 80%+ of PDF size problems.
+
+### Use the Right Format
+
+| Format | Best For | Typical Savings |
+|--------|----------|-----------------|
+| JPEG | Photos, complex images | 60-80% smaller than PNG |
+| PNG | Screenshots, graphics with text | Lossless, good for sharp edges |
+| SVG | Icons, logos, charts | Infinitely scalable, tiny file size |
+| WebP | Modern alternative | 25-35% smaller than JPEG |
+
+### Resize Before Embedding
+
+A common mistake: embedding a 4000x3000 photo when it displays at 400x300.
+
+```html
+<!-- Bad: Full-resolution image -->
+<img src="photo.jpg" style="width: 400px;">
+
+<!-- Good: Pre-sized image -->
+<img src="photo-400w.jpg" style="width: 400px;">
+```
+
+For HTML-to-PDF conversion, resize images to their display dimensions:
+
+```javascript
+// Rule of thumb: 150 DPI for print
+// 400px display width = 400 * 1.5 = 600px actual width
+
+async function optimizeImage(imageUrl, displayWidth) {
+  // Use a service like Cloudinary, imgix, or sharp
+  const optimizedUrl = `${imageUrl}?w=${displayWidth * 1.5}&q=80`;
+  return optimizedUrl;
+}
+```
+
+### Compress Images
+
+JPEG quality between 70-85 is usually indistinguishable from 100:
+
+```javascript
+// Using sharp for Node.js
+import sharp from "sharp";
+
+async function compressImage(inputPath, outputPath) {
+  await sharp(inputPath)
+    .jpeg({ quality: 80 })
+    .resize(800, null, { withoutEnlargement: true })
+    .toFile(outputPath);
+}
+```
+
+### Use Base64 Wisely
+
+Base64 encoding increases size by ~33%. For small images (icons, logos), it's fine. For photos, host them externally:
+
+```html
+<!-- OK for small logos -->
+<img src="data:image/png;base64,iVBORw0KGgo..." style="height: 40px;">
+
+<!-- Better for photos -->
+<img src="https://your-cdn.com/photo.jpg?w=600&q=80">
+```
+
+---
+
+## Font Optimization
+
+Fonts can add 100KB+ per typeface to your PDF.
+
+### Stick to System Fonts
+
+System fonts are already available and don't need embedding:
+
+```css
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+```
+
+Common system fonts:
+- **Sans-serif**: Arial, Helvetica, Verdana, Tahoma
+- **Serif**: Times New Roman, Georgia, Palatino
+- **Monospace**: Courier New, Consolas, Monaco
+
+### Limit Font Variations
+
+Each weight and style is a separate file:
+
+```css
+/* Bad: 4 font files loaded */
+.heading { font-weight: 700; }
+.subheading { font-weight: 600; }
+.body { font-weight: 400; }
+.light { font-weight: 300; }
+
+/* Better: 2 font files */
+.heading { font-weight: 700; }
+.body { font-weight: 400; }
+```
+
+### Use Variable Fonts
+
+If you need custom fonts, variable fonts contain all weights in a single file:
+
+```css
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+}
+```
+
+---
+
+## Efficient HTML Practices
+
+The HTML structure itself affects PDF size.
+
+### Avoid Inline Styles Repetition
+
+```html
+<!-- Bad: Repeated inline styles -->
+<p style="color: #333; font-size: 14px; line-height: 1.6;">Text 1</p>
+<p style="color: #333; font-size: 14px; line-height: 1.6;">Text 2</p>
+<p style="color: #333; font-size: 14px; line-height: 1.6;">Text 3</p>
+
+<!-- Good: CSS classes -->
+<style>
+  .body-text { color: #333; font-size: 14px; line-height: 1.6; }
+</style>
+<p class="body-text">Text 1</p>
+<p class="body-text">Text 2</p>
+<p class="body-text">Text 3</p>
+```
+
+### Minimize CSS
+
+Remove unused styles. If you're using a framework like Tailwind, purge unused classes:
+
+```javascript
+// Only include styles actually used in your HTML
+const usedStyles = `
+  .report { padding: 40px; }
+  .heading { font-size: 24px; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; }
+`;
+```
+
+### Use SVG for Graphics
+
+SVGs are text-based and compress extremely well:
+
+```html
+<!-- Instead of a 50KB icon PNG -->
+<svg width="24" height="24" viewBox="0 0 24 24">
+  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+</svg>
+```
+
+### Avoid Hidden Content
+
+Don't include content that's hidden with CSS:
+
+```html
+<!-- Bad: Content is in the PDF but invisible -->
+<div style="display: none;">Lots of hidden data...</div>
+
+<!-- Good: Don't include it at all -->
+```
+
+---
+
+## DocAPI Optimization Options
+
+DocAPI provides several options that affect file size:
+
+### Print Background
+
+Only enable if needed:
+
+```javascript
+const response = await fetch("https://api.docapi.co/v1/pdf", {
+  method: "POST",
+  headers: {
+    "x-api-key": process.env.DOCAPI_KEY,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    html,
+    options: {
+      // Only set to true if you have background colors/images
+      printBackground: false,
+    },
+  }),
+});
+```
+
+### Page Size
+
+Smaller pages = smaller files:
+
+```javascript
+options: {
+  format: "A4",        // Standard
+  // format: "Letter",  // US standard
+  // width: "6in", height: "4in",  // Custom small size
+}
+```
+
+### Margins
+
+Larger margins mean less content per page, potentially more pages:
+
+```javascript
+options: {
+  margin: {
+    top: "10mm",    // Reasonable margins
+    bottom: "10mm",
+    left: "10mm",
+    right: "10mm",
+  },
+}
+```
+
+---
+
+## Measuring Results
+
+Before optimizing blindly, measure what's causing bloat.
+
+### Check PDF Size
+
+```javascript
+const pdfBuffer = await response.arrayBuffer();
+const sizeKB = pdfBuffer.byteLength / 1024;
+console.log(`PDF size: ${sizeKB.toFixed(1)} KB`);
+```
+
+### Analyze with PDF Tools
+
+Use tools like `pdfinfo` (Linux/Mac) or online analyzers to see what's inside:
+
+```bash
+pdfinfo document.pdf
+# Shows page count, file size, PDF version, etc.
+```
+
+### Compare Before/After
+
+```javascript
+async function compareOptimizations(html, options) {
+  const baseline = await generatePDF(html, {});
+  const optimized = await generatePDF(html, options);
+
+  console.log(`Baseline: ${(baseline.byteLength / 1024).toFixed(1)} KB`);
+  console.log(`Optimized: ${(optimized.byteLength / 1024).toFixed(1)} KB`);
+  console.log(`Savings: ${(100 - (optimized.byteLength / baseline.byteLength) * 100).toFixed(1)}%`);
+}
+```
+
+---
+
+## Common Scenarios
+
+### Invoices (Target: <100KB)
+
+Invoices are mostly text and should be tiny:
+
+```javascript
+// Typical invoice optimizations
+const invoiceHTML = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      /* Minimal CSS, system fonts only */
+      body { font-family: Arial, sans-serif; padding: 40px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+    </style>
+  </head>
+  <body>
+    <!-- Small logo as optimized PNG or SVG -->
+    <img src="https://cdn.example.com/logo.svg" style="height: 40px;">
+
+    <!-- Text content only, no images -->
+    ...
+  </body>
+  </html>
+`;
+```
+
+Expected size: **30-80KB**
+
+### Reports with Charts (Target: <500KB)
+
+Charts should use SVG:
+
+```javascript
+// Use SVG-based chart libraries (Recharts, D3)
+// Avoid canvas-based charts that export as bitmap
+
+const reportHTML = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body { font-family: system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <h1>Monthly Report</h1>
+
+    <!-- SVG chart - stays small regardless of size -->
+    <svg viewBox="0 0 600 300">
+      <!-- Chart paths render as vectors -->
+    </svg>
+
+    <!-- Data table - text only -->
+    <table>...</table>
+  </body>
+  </html>
+`;
+```
+
+Expected size: **100-400KB**
+
+### Photo-Heavy Documents (Target: <2MB)
+
+When you must include photos:
+
+```javascript
+const photoReportHTML = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      img { max-width: 100%; height: auto; }
+    </style>
+  </head>
+  <body>
+    <!-- Use CDN-resized JPEGs at 80% quality -->
+    <img src="https://cdn.example.com/photo1.jpg?w=800&q=80">
+    <img src="https://cdn.example.com/photo2.jpg?w=800&q=80">
+  </body>
+  </html>
+`;
+```
+
+Expected size: **500KB-2MB** depending on photo count
+
+---
+
+## Quick Wins Checklist
+
+Apply these optimizations for immediate results:
+
+- [ ] **Resize images** to display dimensions (+ 1.5x for print quality)
+- [ ] **Compress JPEGs** to 80% quality
+- [ ] **Use SVG** for logos and icons
+- [ ] **Use system fonts** instead of custom fonts
+- [ ] **Limit font weights** to 2-3 variants
+- [ ] **Remove unused CSS** from your templates
+- [ ] **Avoid hidden content** in your HTML
+- [ ] **Set `printBackground: false`** unless needed
+
+---
+
+## Size Targets by Document Type
+
+| Document Type | Target Size | Max Acceptable |
+|---------------|-------------|----------------|
+| Invoice | 30-50 KB | 100 KB |
+| Receipt | 20-40 KB | 80 KB |
+| Contract | 50-100 KB | 200 KB |
+| Report (text) | 50-150 KB | 300 KB |
+| Report (charts) | 100-400 KB | 800 KB |
+| Photo document | 500KB-2MB | 5 MB |
+| Certificate | 50-100 KB | 200 KB |
+
+---
+
+## Troubleshooting Large PDFs
+
+### "My PDF is huge and I don't know why"
+
+1. Remove all images, generate PDF, check size
+2. Add images back one at a time
+3. The culprit is usually obvious
+
+### "Images look blurry"
+
+You over-compressed or under-sized. Try:
+- JPEG quality 85 instead of 70
+- Image width = display width × 2
+
+### "Fonts aren't rendering correctly"
+
+The custom font isn't loading. Either:
+- Host font files on a reliable CDN
+- Switch to system fonts
+
+---
+
+## Conclusion
+
+PDF optimization isn't complicated:
+
+1. **Images** are usually the problem—resize and compress them
+2. **Fonts** add up—stick to system fonts when possible
+3. **HTML** matters—clean, minimal markup produces smaller files
+
+Start with the quick wins checklist and measure your results. Most documents can be reduced by 50-80% with basic optimizations.
+
+---
+
+## Need Help?
+
+- Check out the [API documentation](https://docapi.co/docs)
+- Email us at support@docapi.co
+- We can analyze your templates and suggest optimizations

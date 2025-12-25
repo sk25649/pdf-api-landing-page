@@ -1,0 +1,282 @@
+---
+title: "Build vs Buy: PDF Generation Cost Analysis"
+description: "A detailed breakdown of the true costs of self-hosting PDF generation vs using an API. Calculate infrastructure, engineering time, and hidden expenses."
+date: "2024-12-25"
+author: "Siwan"
+---
+
+Every developer faces this decision: build PDF generation in-house or use an API? The DIY approach seems cheaper at first glance. You already have servers. Libraries are free. How hard can it be?
+
+The answer depends on your volume, your team's time, and costs you might not have considered. Let's break it down.
+
+---
+
+## The DIY Approach: Puppeteer
+
+The most common self-hosted solution is Puppeteer—a headless Chrome library. It's powerful and free. Here's what it actually costs:
+
+### Infrastructure Costs
+
+Puppeteer requires significant resources. Each PDF generation spawns a Chrome instance that consumes:
+
+- **Memory**: 200-500MB per concurrent generation
+- **CPU**: High utilization during rendering
+- **Disk**: Chrome binary is ~280MB
+
+For a typical workload of 10,000 PDFs/month with occasional spikes:
+
+| Resource      | Minimum Requirement         | Monthly Cost (AWS) |
+| ------------- | --------------------------- | ------------------ |
+| EC2 Instance  | t3.medium (2 vCPU, 4GB RAM) | $30                |
+| EBS Storage   | 50GB SSD                    | $5                 |
+| Data Transfer | 50GB outbound               | $5                 |
+| **Total**     |                             | **~$40/month**     |
+
+But that's the minimum. In practice:
+
+### Scaling Issues
+
+Puppeteer doesn't scale horizontally without additional infrastructure:
+
+- **Queue System**: You need Redis or SQS to manage jobs ($15-50/month)
+- **Worker Management**: PM2, Docker, or Kubernetes adds complexity
+- **Load Balancing**: ALB for distributing requests ($18/month)
+- **Monitoring**: Datadog, CloudWatch, or similar ($20-100/month)
+
+Realistic infrastructure for production: **$100-200/month**
+
+### Engineering Time
+
+This is where the real cost hides.
+
+**Initial Setup (20-40 hours)**
+
+- Configure Puppeteer in Docker
+- Handle memory leaks (Chrome is notorious for this)
+- Set up job queue and workers
+- Build retry logic for failures
+- Create health checks and monitoring
+- Write tests
+
+**Ongoing Maintenance (2-5 hours/month)**
+
+- Debug rendering inconsistencies
+- Update Chrome/Puppeteer versions
+- Handle edge cases (fonts, unicode, page breaks)
+- Scale for traffic spikes
+- Fix memory leaks when they recur
+
+At an average developer cost of $75/hour:
+
+| Phase               | Hours | Cost       |
+| ------------------- | ----- | ---------- |
+| Initial Setup       | 30    | $2,250     |
+| Monthly Maintenance | 3     | $225/month |
+| Annual Total        |       | **$4,950** |
+
+### Hidden Costs
+
+**Deployment Complexity**: Your CI/CD now includes a heavyweight service with Chrome dependencies. Build times increase. Docker images bloat.
+
+**On-Call Burden**: PDF generation failures wake someone up at 3 AM. Memory leaks cause cascading failures.
+
+**Security Updates**: Chrome has frequent security patches. Each update risks breaking your PDF rendering.
+
+**Font Management**: Want custom fonts? Now you're managing font files, licensing, and rendering differences across environments.
+
+---
+
+## The API Approach: DocAPI
+
+Let's compare to using DocAPI at the same 10,000 PDFs/month.
+
+### Direct Costs
+
+| Plan     | PDFs/month | Cost |
+| -------- | ---------- | ---- |
+| Free     | 100        | $0   |
+| Starter  | 1,000      | $19  |
+| Pro      | 10,000     | $49  |
+| Business | 50,000     | $149 |
+
+For 10,000 PDFs/month: **$49/month**
+
+### Engineering Time
+
+**Initial Setup (10 minutes)**
+
+- Sign up for API key
+- Make a fetch request
+- Done
+
+**Ongoing Maintenance (0-1 hours/month)**
+
+- Occasional API version updates
+- Monitor usage dashboard
+
+At the same $75/hour rate:
+
+| Phase               | Hours | Cost         |
+| ------------------- | ----- | ------------ |
+| Initial Setup       | 3     | $225         |
+| Monthly Maintenance | 0.5   | $37.50/month |
+| Annual Total        |       | **$675**     |
+
+### What You Don't Pay For
+
+- No infrastructure management
+- No Chrome security patches
+- No memory leak debugging
+- No scaling headaches
+- No on-call for PDF failures
+
+---
+
+## Side-by-Side Comparison
+
+For 10,000 PDFs/month over one year:
+
+| Cost Category       | Self-Hosted (Puppeteer) | API (DocAPI) |
+| ------------------- | ----------------------- | ------------ |
+| Infrastructure      | $1,200-2,400            | $0           |
+| Initial Engineering | $2,250                  | $225         |
+| Monthly Maintenance | $2,700                  | $450         |
+| API Subscription    | $0                      | $588         |
+| **Total Year 1**    | **$6,150-$7,350**       | **$1,263**   |
+| **Total Year 2+**   | **$3,900-$5,100**       | **$1,038**   |
+
+The API approach is **5-6x cheaper in Year 1** and **4-5x cheaper** in subsequent years.
+
+---
+
+## When DIY Makes Sense
+
+Self-hosting isn't always wrong. Consider building in-house if:
+
+### 1. Extreme Volume (100k+ PDFs/month)
+
+At very high volumes, API costs rise while infrastructure costs stay relatively flat. The break-even point is typically around 100,000-200,000 PDFs/month, depending on your engineering costs.
+
+### 2. Unusual Requirements
+
+If you need capabilities that APIs don't offer—like custom Chrome extensions, specific browser flags, or deep Puppeteer integrations—you might need to self-host.
+
+### 3. Data Sensitivity
+
+If your PDFs contain highly sensitive data and you can't send HTML to a third-party API, self-hosting is necessary. Though note that DocAPI doesn't store your HTML or PDFs.
+
+### 4. You Already Have the Infrastructure
+
+If you're already running a robust job queue system with available capacity, the incremental cost of adding PDF generation is lower.
+
+---
+
+## When API Makes Sense
+
+Use an API when:
+
+### 1. You're a Startup or Small Team
+
+Engineering time is your most valuable resource. Spend it on your core product, not on PDF infrastructure.
+
+### 2. Variable or Unpredictable Volume
+
+APIs handle spikes automatically. No capacity planning required.
+
+### 3. You Value Reliability
+
+PDF APIs are someone else's core product. They've solved the edge cases you haven't hit yet.
+
+### 4. Fast Time-to-Market
+
+Go from idea to production in hours, not weeks.
+
+---
+
+## The Hidden Cost: Opportunity
+
+The hardest cost to quantify is opportunity cost.
+
+Those 30+ hours of initial setup? That's a week of feature development. Those 3 hours/month of maintenance? That's 36 hours/year—almost a full week—of debugging Chrome instead of building your product.
+
+For early-stage startups, this is often the decisive factor.
+
+---
+
+## Real-World Example
+
+A SaaS company generating invoices:
+
+**Before (Self-Hosted)**
+
+- 2 developers spent 3 weeks building PDF infrastructure
+- Monthly AWS costs: $180
+- Ongoing bug fixes: 4 hours/month
+- Occasional P1 incidents when Chrome crashed
+
+**After (DocAPI)**
+
+- 1 developer integrated API in less than 1 hour
+- Monthly cost: $49
+- Maintenance: Nearly zero
+- No infrastructure incidents
+
+**Annual savings**: ~$5,000 in direct costs, plus 100+ engineering hours redirected to product development.
+
+---
+
+## Calculating Your Break-Even
+
+Here's a formula to estimate your break-even point:
+
+```
+Break-even PDFs/month =
+  (Self-hosted monthly cost + (Engineering hours × Hourly rate))
+  ÷
+  API cost per PDF
+```
+
+For most teams:
+
+- Self-hosted monthly cost: $100-200
+- Engineering hours: 3-5/month
+- Hourly rate: $50-100
+- API cost per PDF: $0.005-0.01
+
+This usually puts break-even at **50,000-200,000 PDFs/month**.
+
+---
+
+## Making the Decision
+
+Ask yourself:
+
+1. **Is PDF generation core to your business?** If yes, consider owning it. If no, outsource it.
+
+2. **Do you have DevOps capacity?** Running Puppeteer reliably requires operational expertise.
+
+3. **What's your volume trajectory?** Starting with an API and migrating to self-hosted at scale is a common pattern.
+
+4. **How critical is uptime?** API providers often have better uptime than DIY solutions.
+
+---
+
+## Conclusion
+
+For most teams, the math is clear: **PDF APIs are significantly cheaper than self-hosting** until you reach very high volumes.
+
+The "free" Puppeteer library costs thousands of dollars in engineering time. The "expensive" API subscription saves you from infrastructure headaches and lets you focus on what matters—your product.
+
+Start with an API. If you ever hit 100k+ PDFs/month, you'll have the revenue to justify building in-house. Until then, there are better uses for your engineering hours.
+
+---
+
+## Try DocAPI Free
+
+Get 100 free PDFs per month—no credit card required.
+
+1. **Sign up** at [docapi.co](https://docapi.co)
+2. **Get your API key** instantly
+3. **Generate your first PDF** in minutes
+
+Questions about pricing or volume? Email us at support@docapi.co.
