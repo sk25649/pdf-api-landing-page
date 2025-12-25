@@ -101,6 +101,12 @@ export default async function RootLayout({
             </Link>
             <nav className="flex items-center gap-6">
               <Link
+                href="/tools/invoice-generator"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Free Invoice Generator
+              </Link>
+              <Link
                 href="/blog"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
@@ -150,6 +156,15 @@ export default async function RootLayout({
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Pricing
+                  </Link>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-sm font-semibold">Tools</h4>
+                  <Link
+                    href="/tools/invoice-generator"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Invoice Generator
                   </Link>
                 </div>
                 <div className="flex flex-col gap-2">
