@@ -1,0 +1,254 @@
+---
+title: "DocAPI vs PDFShift: HTML to PDF API Comparison"
+description: "Compare DocAPI and PDFShift for HTML to PDF conversion. Pricing, features, and which API is right for your project."
+date: "2024-12-25"
+author: "Siwan"
+---
+
+Both **DocAPI** and **PDFShift** are cloud APIs that convert HTML to PDF. They solve the same problem but with different approaches and pricing models.
+
+Here's an honest comparison to help you decide.
+
+---
+
+## Quick Overview
+
+| | DocAPI | PDFShift |
+|---|--------|----------|
+| **Focus** | PDFs + Screenshots | PDFs only |
+| **Free tier** | 100/month | 50/month |
+| **Starting price** | $9/month | $9/month |
+| **Credit rollover** | No | Yes |
+| **Screenshot API** | Yes | No |
+
+---
+
+## Pricing Comparison
+
+### DocAPI Pricing
+
+| Plan | Price | API Calls |
+|------|-------|-----------|
+| Free | $0 | 100/month |
+| Starter | $9 | 1,000/month |
+| Pro | $49 | 5,000/month |
+| Business | $99 | 20,000/month |
+
+### PDFShift Pricing
+
+| Plan | Price | Credits |
+|------|-------|---------|
+| Free | $0 | 50/month |
+| Starter | $9 | 500/month |
+| Boost | $24 | 2,500/month |
+| Growth | $39 | 5,000/month |
+| Business | $74 | 10,000/month |
+
+### Price Per PDF
+
+At different volumes:
+
+| Volume | DocAPI | PDFShift |
+|--------|--------|----------|
+| 100/month | Free | Free |
+| 500/month | $9 (Starter) | $9 (Starter) |
+| 1,000/month | $9 (Starter) | $24 (Boost) |
+| 5,000/month | $49 (Pro) | $39 (Growth) |
+| 10,000/month | $99 (Business) | $74 (Business) |
+| 20,000/month | $99 (Business) | ~$150 (custom) |
+
+**Summary:** DocAPI is cheaper at low-to-mid volumes (1,000-5,000), PDFShift is slightly cheaper at 5,000-10,000. DocAPI wins again at 20,000+.
+
+---
+
+## Feature Comparison
+
+### Both Support
+
+- HTML to PDF conversion
+- Custom page sizes (A4, Letter, etc.)
+- Margins and padding
+- Headers and footers
+- CSS and JavaScript rendering
+- Custom fonts
+- Landscape/portrait orientation
+
+### DocAPI Extras
+
+- **Screenshot API** - Capture websites as PNG/JPEG
+- **OG Image generation** - 1200x630 social previews
+- **Simpler API** - Fewer parameters, easier to start
+
+### PDFShift Extras
+
+- **Credit rollover** - Unused credits carry over
+- **Parallel processing** - Batch multiple PDFs
+- **S3 upload** - Direct upload to your S3 bucket
+- **Longer history** - Been around since 2018
+
+---
+
+## API Comparison
+
+### DocAPI
+
+```javascript
+const response = await fetch('https://api.docapi.co/v1/pdf', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'your-api-key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    html: '<h1>Hello World</h1>',
+    options: {
+      format: 'A4',
+      margin: { top: '10mm', bottom: '10mm' }
+    }
+  })
+});
+
+const pdf = await response.arrayBuffer();
+```
+
+### PDFShift
+
+```javascript
+const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Basic ' + btoa('api:your-api-key'),
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    source: '<h1>Hello World</h1>',
+    format: 'A4',
+    margin: '10mm'
+  })
+});
+
+const pdf = await response.arrayBuffer();
+```
+
+Both are straightforward. DocAPI uses `x-api-key` header, PDFShift uses Basic Auth. Minor difference.
+
+---
+
+## When to Choose DocAPI
+
+### 1. You Need Screenshots Too
+
+DocAPI includes a screenshot API at no extra cost. If you need both PDFs and screenshots (like OG images), DocAPI is one API instead of two.
+
+```javascript
+// Same API, same key - just different endpoint
+const screenshot = await fetch('https://api.docapi.co/v1/screenshot', {
+  method: 'POST',
+  headers: { 'x-api-key': 'your-api-key' },
+  body: JSON.stringify({
+    url: 'https://example.com',
+    options: { width: 1200, height: 630 }
+  })
+});
+```
+
+### 2. You're in the 1,000-2,500 Range
+
+DocAPI's Starter plan ($9) includes 1,000 PDFs. PDFShift's Starter ($9) only includes 500. If you need 1,000/month, DocAPI is half the price.
+
+### 3. You Want Simplicity
+
+DocAPI has fewer configuration options - which is a feature, not a bug. Less to learn, fewer ways to misconfigure.
+
+### 4. You Value Support
+
+Smaller company = more responsive support. We actually reply to emails.
+
+---
+
+## When to Choose PDFShift
+
+### 1. You Need Credit Rollover
+
+PDFShift lets unused credits roll over to the next month. If your usage is unpredictable (100 one month, 500 the next), rollover helps.
+
+### 2. You Need S3 Integration
+
+PDFShift can upload generated PDFs directly to your S3 bucket. Useful for workflows where you store PDFs long-term.
+
+### 3. You Want Batch Processing
+
+PDFShift's parallel processing handles multiple PDFs in a single request. Good for bulk generation jobs.
+
+### 4. You Prefer Established Companies
+
+PDFShift has been around since 2018. If company age matters to you, they have more history.
+
+---
+
+## Performance
+
+Both services use headless Chrome under the hood, so rendering quality is identical. Response times are similar:
+
+| Metric | DocAPI | PDFShift |
+|--------|--------|----------|
+| Simple HTML | ~1-2s | ~1-2s |
+| Complex page | ~2-4s | ~2-4s |
+| With images | ~3-5s | ~3-5s |
+
+No significant performance difference for most use cases.
+
+---
+
+## Migration
+
+Switching between the two is easy since both accept HTML input:
+
+### From PDFShift to DocAPI
+
+```javascript
+// Before (PDFShift)
+fetch('https://api.pdfshift.io/v3/convert/pdf', {
+  headers: { 'Authorization': 'Basic ' + btoa('api:key') },
+  body: JSON.stringify({ source: html })
+})
+
+// After (DocAPI)
+fetch('https://api.docapi.co/v1/pdf', {
+  headers: { 'x-api-key': 'your-key' },
+  body: JSON.stringify({ html })
+})
+```
+
+The main changes:
+- Different endpoint
+- Different auth method
+- `source` → `html` parameter name
+
+Migration takes about 10 minutes.
+
+---
+
+## The Verdict
+
+**Choose DocAPI if:**
+- You need screenshots + PDFs
+- Your volume is 1,000-2,500/month
+- You want a simpler API
+- You value responsive support
+
+**Choose PDFShift if:**
+- You need credit rollover
+- You need direct S3 uploads
+- You need batch processing
+- Company age matters to you
+
+**Honestly?** Both are solid products. For most developers generating PDFs, either works fine. Try both free tiers and see which feels better.
+
+---
+
+## Try DocAPI Free
+
+- **[Get API Key](https://app.docapi.co)** - 100 free PDFs/month
+- **[Documentation](/docs)** - Full API reference
+- **[Free Invoice Generator](/tools/invoice-generator)** - See it in action
