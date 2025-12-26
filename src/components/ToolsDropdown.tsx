@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, FileText, Image } from "lucide-react";
+import { ChevronDown, FileText, Image, UserCircle } from "lucide-react";
 
 const tools = [
   {
@@ -10,6 +10,12 @@ const tools = [
     href: "/tools/invoice-generator",
     description: "Create professional PDF invoices",
     icon: FileText,
+  },
+  {
+    name: "Resume Builder",
+    href: "/tools/resume-builder",
+    description: "Build professional PDF resumes",
+    icon: UserCircle,
   },
   {
     name: "OG Image Generator",

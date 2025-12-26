@@ -4,7 +4,8 @@ export type StatKey =
   | "pdfs_generated"
   | "screenshots_generated"
   | "invoices_created"
-  | "og_images_generated";
+  | "og_images_generated"
+  | "resumes_created";
 
 /**
  * Increment a stat counter
@@ -39,11 +40,12 @@ export async function getStat(key: StatKey): Promise<number> {
  */
 export async function getAllStats(): Promise<Record<StatKey, number>> {
   try {
-    const [pdfs, screenshots, invoices, ogImages] = await Promise.all([
+    const [pdfs, screenshots, invoices, ogImages, resumes] = await Promise.all([
       kv.get<number>("pdfs_generated"),
       kv.get<number>("screenshots_generated"),
       kv.get<number>("invoices_created"),
       kv.get<number>("og_images_generated"),
+      kv.get<number>("resumes_created"),
     ]);
 
     return {
@@ -51,6 +53,7 @@ export async function getAllStats(): Promise<Record<StatKey, number>> {
       screenshots_generated: screenshots ?? 0,
       invoices_created: invoices ?? 0,
       og_images_generated: ogImages ?? 0,
+      resumes_created: resumes ?? 0,
     };
   } catch (error) {
     console.error("Failed to get all stats:", error);
@@ -59,6 +62,7 @@ export async function getAllStats(): Promise<Record<StatKey, number>> {
       screenshots_generated: 0,
       invoices_created: 0,
       og_images_generated: 0,
+      resumes_created: 0,
     };
   }
 }
@@ -72,6 +76,7 @@ export async function getTotalDocuments(): Promise<number> {
     stats.pdfs_generated +
     stats.screenshots_generated +
     stats.invoices_created +
-    stats.og_images_generated
+    stats.og_images_generated +
+    stats.resumes_created
   );
 }
