@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { incrementStat } from "@/lib/stats";
 
 const requestSchema = z.object({
   url: z.string().url("Invalid URL"),
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
     }
 
     const imageBuffer = await screenshotResponse.arrayBuffer();
+
+    // Track successful generation (don't await to avoid slowing response)
+    incrementStat("og_images_generated").catch(() => {});
 
     return new NextResponse(imageBuffer, {
       headers: {

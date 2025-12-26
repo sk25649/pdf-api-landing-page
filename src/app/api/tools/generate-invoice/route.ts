@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { incrementStat } from "@/lib/stats";
 
 const lineItemSchema = z.object({
   description: z.string(),
@@ -274,6 +275,9 @@ export async function POST(request: NextRequest) {
     }
 
     const pdfBuffer = await pdfResponse.arrayBuffer();
+
+    // Track successful generation (don't await to avoid slowing response)
+    incrementStat("invoices_created").catch(() => {});
 
     return new NextResponse(pdfBuffer, {
       headers: {
