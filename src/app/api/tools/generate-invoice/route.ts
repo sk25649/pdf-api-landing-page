@@ -19,6 +19,8 @@ const invoiceSchema = z.object({
   invoiceDate: z.string(),
   dueDate: z.string(),
   lineItems: z.array(lineItemSchema),
+  discountType: z.enum(["percentage", "fixed"]).default("percentage"),
+  discountValue: z.number().default(0),
   taxRate: z.number().default(0),
   notes: z.string().optional(),
   paymentInstructions: z.string().optional(),
@@ -48,8 +50,13 @@ function generateInvoiceHTML(data: z.infer<typeof invoiceSchema>): string {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0
   );
-  const taxAmount = subtotal * (data.taxRate / 100);
-  const total = subtotal + taxAmount;
+  const discountAmount =
+    data.discountType === "percentage"
+      ? subtotal * (data.discountValue / 100)
+      : Math.min(data.discountValue, subtotal);
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = taxableAmount * (data.taxRate / 100);
+  const total = subtotal - discountAmount + taxAmount;
 
   const lineItemsHTML = data.lineItems
     .map(
@@ -146,6 +153,16 @@ function generateInvoiceHTML(data: z.infer<typeof invoiceSchema>): string {
               <span style="color: #6b7280;">Subtotal</span>
               <span style="font-weight: 500; color: #111827;">${formatCurrency(subtotal)}</span>
             </div>
+            ${
+              discountAmount > 0
+                ? `
+            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+              <span style="color: #6b7280;">Discount${data.discountType === "percentage" ? ` (${data.discountValue}%)` : ""}</span>
+              <span style="font-weight: 500; color: #16a34a;">-${formatCurrency(discountAmount)}</span>
+            </div>
+            `
+                : ""
+            }
             ${
               data.taxRate > 0
                 ? `

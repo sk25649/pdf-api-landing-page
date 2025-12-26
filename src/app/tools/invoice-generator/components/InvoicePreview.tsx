@@ -5,6 +5,7 @@ import {
   InvoiceFormData,
   calculateLineItemAmount,
   calculateSubtotal,
+  calculateDiscount,
   calculateTax,
   calculateTotal,
   formatCurrency,
@@ -18,8 +19,16 @@ export function InvoicePreview({ form }: InvoicePreviewProps) {
   const data = form.watch();
   const lineItems = data.lineItems || [];
   const subtotal = calculateSubtotal(lineItems);
-  const taxAmount = calculateTax(subtotal, data.taxRate || 0);
-  const total = calculateTotal(subtotal, taxAmount);
+  const maxDiscount = data.discountType === "percentage" ? 100 : subtotal;
+  const clampedDiscountValue = Math.min(data.discountValue || 0, maxDiscount);
+  const discountAmount = calculateDiscount(
+    subtotal,
+    data.discountType || "percentage",
+    clampedDiscountValue
+  );
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = calculateTax(taxableAmount, data.taxRate || 0);
+  const total = calculateTotal(subtotal, discountAmount, taxAmount);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -160,6 +169,19 @@ export function InvoicePreview({ form }: InvoicePreviewProps) {
               <span className="text-gray-600">Subtotal</span>
               <span className="font-medium">{formatCurrency(subtotal)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">
+                  Discount
+                  {data.discountType === "percentage"
+                    ? ` (${clampedDiscountValue}%)`
+                    : ""}
+                </span>
+                <span className="font-medium text-green-600">
+                  -{formatCurrency(discountAmount)}
+                </span>
+              </div>
+            )}
             {(data.taxRate || 0) > 0 && (
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Tax ({data.taxRate}%)</span>

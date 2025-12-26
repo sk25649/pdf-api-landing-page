@@ -32,6 +32,8 @@ export function InvoiceGeneratorClient() {
       invoiceDate: getDefaultInvoiceDate(),
       dueDate: getDefaultDueDate(),
       lineItems: [{ description: "", quantity: 1, unitPrice: 0 }],
+      discountType: "percentage",
+      discountValue: 0,
       taxRate: 0,
       notes: "",
       paymentInstructions: "",
@@ -146,7 +148,7 @@ export function InvoiceGeneratorClient() {
                 Live preview of your invoice
               </p>
             </div>
-            <div className="rounded-lg border bg-gray-100 p-4">
+            <div className="rounded-lg border bg-gray-100 p-4 overflow-hidden">
               <InvoicePreview form={form} />
             </div>
           </div>

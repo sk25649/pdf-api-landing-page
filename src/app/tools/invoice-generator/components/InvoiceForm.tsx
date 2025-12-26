@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -19,11 +18,11 @@ import { LineItemsTable } from "./LineItemsTable";
 import {
   InvoiceFormData,
   calculateSubtotal,
+  calculateDiscount,
   calculateTax,
   calculateTotal,
   formatCurrency,
 } from "../types";
-import { TAX_OPTIONS, getTaxRateByState } from "../tax-rates";
 
 interface InvoiceFormProps {
   form: UseFormReturn<InvoiceFormData>;
@@ -31,20 +30,7 @@ interface InvoiceFormProps {
 
 export function InvoiceForm({ form }: InvoiceFormProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [selectedTaxOption, setSelectedTaxOption] = useState<string>("none");
-
-  const handleTaxOptionChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value;
-      setSelectedTaxOption(value);
-
-      if (value !== "custom") {
-        const rate = getTaxRateByState(value);
-        form.setValue("taxRate", rate);
-      }
-    },
-    [form]
-  );
+  const [showDiscount, setShowDiscount] = useState(false);
 
   const handleLogoUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,10 +59,29 @@ export function InvoiceForm({ form }: InvoiceFormProps) {
   }, [form]);
 
   const watchLineItems = form.watch("lineItems");
+  const watchDiscountType = form.watch("discountType");
+  const watchDiscountValue = form.watch("discountValue");
   const watchTaxRate = form.watch("taxRate");
   const subtotal = calculateSubtotal(watchLineItems || []);
-  const taxAmount = calculateTax(subtotal, watchTaxRate || 0);
-  const total = calculateTotal(subtotal, taxAmount);
+
+  // Clamp discount value to valid range
+  const maxDiscount = watchDiscountType === "percentage" ? 100 : subtotal;
+  const clampedDiscountValue = Math.min(watchDiscountValue || 0, maxDiscount);
+
+  useEffect(() => {
+    if (watchDiscountValue > maxDiscount) {
+      form.setValue("discountValue", maxDiscount);
+    }
+  }, [watchDiscountValue, maxDiscount, form]);
+
+  const discountAmount = calculateDiscount(
+    subtotal,
+    watchDiscountType || "percentage",
+    clampedDiscountValue
+  );
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = calculateTax(taxableAmount, watchTaxRate || 0);
+  const total = calculateTotal(subtotal, discountAmount, taxAmount);
 
   return (
     <div className="space-y-6">
@@ -255,49 +260,80 @@ export function InvoiceForm({ form }: InvoiceFormProps) {
           <CardTitle className="text-lg">Totals</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="taxOption">Tax Rate</Label>
-              <Select
-                id="taxOption"
-                value={selectedTaxOption}
-                onChange={handleTaxOptionChange}
-              >
-                <optgroup label="Options">
-                  <option value="none">No Tax (0%)</option>
-                  <option value="custom">Custom Rate</option>
-                </optgroup>
-                <optgroup label="US States">
-                  {TAX_OPTIONS.filter(
-                    (opt) => opt.value !== "none" && opt.value !== "custom"
-                  ).map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                State tax rates shown are base rates. Local taxes may apply.
-              </p>
-            </div>
-
-            {selectedTaxOption === "custom" && (
-              <div className="flex items-center gap-3">
-                <Label htmlFor="taxRate" className="whitespace-nowrap">
-                  Custom Rate (%)
-                </Label>
-                <Input
-                  id="taxRate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  className="w-24"
-                  {...form.register("taxRate", { valueAsNumber: true })}
-                />
+          {showDiscount ? (
+            <div className="flex items-center gap-3">
+              <Label htmlFor="discountValue" className="whitespace-nowrap">
+                Discount
+              </Label>
+              <Input
+                id="discountValue"
+                type="number"
+                step="0.01"
+                min="0"
+                max={watchDiscountType === "percentage" ? 100 : subtotal}
+                placeholder="0"
+                className="w-24"
+                {...form.register("discountValue", { valueAsNumber: true })}
+              />
+              <div className="flex rounded-md border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => form.setValue("discountType", "percentage")}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    watchDiscountType === "percentage"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted"
+                  }`}
+                >
+                  %
+                </button>
+                <button
+                  type="button"
+                  onClick={() => form.setValue("discountType", "fixed")}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors border-l ${
+                    watchDiscountType === "fixed"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted"
+                  }`}
+                >
+                  $
+                </button>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDiscount(false);
+                  form.setValue("discountValue", 0);
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowDiscount(true)}
+              className="text-sm font-medium text-green-600 hover:text-green-700"
+            >
+              Add Discount
+            </button>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Label htmlFor="taxRate" className="whitespace-nowrap">
+              Tax Rate (%)
+            </Label>
+            <Input
+              id="taxRate"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              placeholder="0"
+              className="w-24"
+              {...form.register("taxRate", { valueAsNumber: true })}
+            />
           </div>
 
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
@@ -305,6 +341,19 @@ export function InvoiceForm({ form }: InvoiceFormProps) {
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Discount
+                  {watchDiscountType === "percentage"
+                    ? ` (${clampedDiscountValue}%)`
+                    : ""}
+                </span>
+                <span className="text-green-600">
+                  -{formatCurrency(discountAmount)}
+                </span>
+              </div>
+            )}
             {(watchTaxRate || 0) > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">

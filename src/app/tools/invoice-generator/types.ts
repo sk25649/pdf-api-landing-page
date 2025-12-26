@@ -27,6 +27,8 @@ export const invoiceSchema = z.object({
   lineItems: z.array(lineItemSchema).min(1, "At least one line item is required"),
 
   // Totals
+  discountType: z.enum(["percentage", "fixed"]),
+  discountValue: z.number().min(0),
   taxRate: z.number().min(0).max(100),
 
   // Additional
@@ -45,12 +47,27 @@ export function calculateSubtotal(items: LineItem[]): number {
   return items.reduce((sum, item) => sum + calculateLineItemAmount(item), 0);
 }
 
-export function calculateTax(subtotal: number, taxRate: number): number {
-  return subtotal * (taxRate / 100);
+export function calculateDiscount(
+  subtotal: number,
+  discountType: "percentage" | "fixed",
+  discountValue: number
+): number {
+  if (discountType === "percentage") {
+    return subtotal * (discountValue / 100);
+  }
+  return Math.min(discountValue, subtotal);
 }
 
-export function calculateTotal(subtotal: number, taxAmount: number): number {
-  return subtotal + taxAmount;
+export function calculateTax(amount: number, taxRate: number): number {
+  return amount * (taxRate / 100);
+}
+
+export function calculateTotal(
+  subtotal: number,
+  discountAmount: number,
+  taxAmount: number
+): number {
+  return subtotal - discountAmount + taxAmount;
 }
 
 export function formatCurrency(amount: number): string {
