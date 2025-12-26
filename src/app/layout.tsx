@@ -112,6 +112,12 @@ export default async function RootLayout({
               >
                 Blog
               </Link>
+              <Link
+                href="/pricing"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Pricing
+              </Link>
               {user ? (
                 <Link
                   href="/dashboard"
