@@ -182,6 +182,21 @@ export default async function RootLayout({
                     Get Started
                   </Link>
                 </div>
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-sm font-semibold">Legal</h4>
+                  <Link
+                    href="/terms"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Terms of Service
+                  </Link>
+                  <Link
+                    href="/privacy"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Privacy Policy
+                  </Link>
+                </div>
               </nav>
             </div>
             <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
