@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
 import { Analytics } from "@vercel/analytics/next";
+import { ToolsDropdown } from "@/components/ToolsDropdown";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -100,12 +101,7 @@ export default async function RootLayout({
               Doc API
             </Link>
             <nav className="flex items-center gap-6">
-              <Link
-                href="/tools/invoice-generator"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                Free Invoice Generator
-              </Link>
+              <ToolsDropdown />
               <Link
                 href="/blog"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -171,6 +167,12 @@ export default async function RootLayout({
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Invoice Generator
+                  </Link>
+                  <Link
+                    href="/tools/og-image-generator"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    OG Image Generator
                   </Link>
                 </div>
                 <div className="flex flex-col gap-2">
