@@ -1,0 +1,289 @@
+---
+title: "DocAPI vs Puppeteer: Which Should You Use for PDF Generation?"
+description: "A practical comparison of DocAPI and Puppeteer for generating PDFs. Learn when to use a managed API vs self-hosted solution."
+date: "2024-12-25"
+author: "Siwan"
+---
+
+When you need to generate PDFs programmatically, two popular options are **Puppeteer** (self-hosted) and **DocAPI** (managed API). Both can convert HTML to PDF, but they solve the problem very differently.
+
+Let's break down when to use each.
+
+---
+
+## What is Puppeteer?
+
+[Puppeteer](https://pptr.dev/) is Google's open-source Node.js library for controlling headless Chrome. It's incredibly powerful - you can automate browsers, scrape websites, take screenshots, and yes, generate PDFs.
+
+```javascript
+const puppeteer = require('puppeteer');
+
+async function generatePDF(html) {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setContent(html);
+  const pdf = await page.pdf({ format: 'A4' });
+  await browser.close();
+  return pdf;
+}
+```
+
+**Pros:**
+- Free and open source
+- Full control over the browser
+- No external dependencies (once set up)
+- Works offline
+
+**Cons:**
+- You host and maintain it
+- Chrome is resource-heavy (~200-500MB RAM per instance)
+- Scaling is complex (need browser pools)
+- Cold starts can be slow
+- Serverless deployment is tricky
+
+---
+
+## What is DocAPI?
+
+[DocAPI](https://www.docapi.co) is a managed HTML to PDF API. Send HTML, get back a PDF. No browser management, no infrastructure.
+
+```javascript
+async function generatePDF(html) {
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': 'your-api-key',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ html })
+  });
+  return response.arrayBuffer();
+}
+```
+
+**Pros:**
+- No infrastructure to manage
+- Works from any language/platform
+- Scales automatically
+- Fast cold starts
+- Works great in serverless environments
+
+**Cons:**
+- Costs money at scale
+- Requires internet connection
+- Less control than raw Puppeteer
+
+---
+
+## Side-by-Side Comparison
+
+| Feature | Puppeteer | DocAPI |
+|---------|-----------|--------|
+| **Setup time** | Hours (dependencies, Docker, etc.) | Minutes |
+| **Infrastructure** | You manage it | Managed for you |
+| **Cost** | Free + server costs | $0-99/month |
+| **Scaling** | Complex (browser pools) | Automatic |
+| **Cold start** | 2-5 seconds | < 500ms |
+| **Serverless friendly** | Difficult | Yes |
+| **Offline support** | Yes | No |
+| **Full browser control** | Yes | No |
+
+---
+
+## The Hidden Costs of Puppeteer
+
+Puppeteer is "free" but running it in production isn't:
+
+### 1. Server Costs
+
+Chrome needs memory. A lot of it.
+
+- Each browser instance: ~200-500MB RAM
+- Concurrent PDFs need multiple instances
+- A t3.medium (4GB RAM) handles ~8-10 concurrent requests max
+
+**Monthly cost estimate:** $30-100+ for a decent server
+
+### 2. DevOps Time
+
+Setting up Puppeteer in production requires:
+
+- Docker configuration (Chrome dependencies are painful)
+- Browser pool management
+- Memory leak handling
+- Crash recovery
+- Health checks and monitoring
+
+**Time estimate:** 2-8 hours initial setup, ongoing maintenance
+
+### 3. Scaling Complexity
+
+What happens when traffic spikes?
+
+- Need auto-scaling groups
+- Load balancer configuration
+- Browser instance management across servers
+- Queue system for high load
+
+**This is where Puppeteer gets expensive fast.**
+
+---
+
+## When to Use Puppeteer
+
+Puppeteer is the right choice when:
+
+### 1. You Need Full Browser Control
+
+If you're doing complex browser automation beyond PDF generation - scraping, testing, or interacting with web apps - Puppeteer gives you complete control.
+
+### 2. You're Already Running Puppeteer
+
+If your infrastructure already has Puppeteer for other purposes, adding PDF generation is incremental.
+
+### 3. Offline/Air-Gapped Environments
+
+If you can't make external API calls, Puppeteer is your only option.
+
+### 4. Very High Volume + Engineering Resources
+
+At 100,000+ PDFs/month with a dedicated DevOps team, self-hosting might be cheaper. Maybe.
+
+---
+
+## When to Use DocAPI
+
+DocAPI is the right choice when:
+
+### 1. You Want to Ship Fast
+
+No Docker files. No Chrome dependencies. No browser pools. Just an API call.
+
+```javascript
+// This is your entire PDF generation setup
+const pdf = await fetch('https://api.docapi.co/v1/pdf', {
+  method: 'POST',
+  headers: { 'x-api-key': process.env.DOCAPI_KEY },
+  body: JSON.stringify({ html: '<h1>Invoice</h1>' })
+});
+```
+
+### 2. You're Using Serverless
+
+Puppeteer and serverless don't mix well:
+
+- Lambda has a 250MB deployment limit (Chrome alone is larger)
+- Cold starts kill performance
+- Memory limits are problematic
+
+DocAPI is just an HTTP call - works perfectly in Lambda, Vercel, Cloudflare Workers, etc.
+
+### 3. You Don't Want to Manage Infrastructure
+
+No servers to patch. No Chrome updates to track. No memory leaks to debug. No 3 AM pages because Chrome crashed.
+
+### 4. Predictable Costs Matter
+
+$9-99/month is predictable. "However much AWS charges for that spike last Tuesday" is not.
+
+---
+
+## Real-World Example: Invoice Generation
+
+Let's say you need to generate 1,000 invoices per month.
+
+### With Puppeteer
+
+```javascript
+// You need all of this:
+const puppeteer = require('puppeteer');
+
+let browser;
+
+async function initBrowser() {
+  browser = await puppeteer.launch({
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process'
+    ]
+  });
+}
+
+async function generateInvoice(html) {
+  if (!browser) await initBrowser();
+
+  const page = await browser.newPage();
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+    });
+    return pdf;
+  } finally {
+    await page.close();
+  }
+}
+
+// Plus: Docker setup, error handling, browser restart logic,
+// memory monitoring, scaling configuration...
+```
+
+**Time to production:** 4-8 hours
+**Monthly cost:** ~$30 (small server) + your time
+
+### With DocAPI
+
+```javascript
+async function generateInvoice(html) {
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      html,
+      options: {
+        format: 'A4',
+        margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+      }
+    })
+  });
+  return response.arrayBuffer();
+}
+```
+
+**Time to production:** 10 minutes
+**Monthly cost:** $9 (Starter plan covers 1,000 PDFs)
+
+---
+
+## The Verdict
+
+**Choose Puppeteer if:**
+- You need full browser automation beyond PDFs
+- You have DevOps resources and time
+- You're in an offline/restricted environment
+- You're at massive scale with engineering bandwidth
+
+**Choose DocAPI if:**
+- You want to ship today, not next week
+- You're using serverless
+- You don't want infrastructure headaches
+- You value your time over saving $20/month
+
+---
+
+## Try It Free
+
+Not sure which is right for you? Try DocAPI free:
+
+- **[Get API Key](https://app.docapi.co)** - 100 free PDFs/month
+- **[Documentation](/docs)** - Full API reference
+- **[Free Invoice Generator](/tools/invoice-generator)** - See it in action
