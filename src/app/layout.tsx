@@ -109,7 +109,7 @@ export default async function RootLayout({
                 Blog
               </Link>
               <Link
-                href="/pricing"
+                href="/#pricing"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 Pricing
@@ -154,7 +154,7 @@ export default async function RootLayout({
                     Documentation
                   </Link>
                   <Link
-                    href="/pricing"
+                    href="/#pricing"
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Pricing
