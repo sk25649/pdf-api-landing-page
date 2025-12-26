@@ -229,6 +229,8 @@ export async function POST(request: NextRequest) {
       headers: {
         "x-api-key": apiKey,
         "Content-Type": "application/json",
+        "User-Agent": "DocAPI-InvoiceGenerator/1.0",
+        "Accept": "application/pdf",
       },
       body: JSON.stringify({
         html,
