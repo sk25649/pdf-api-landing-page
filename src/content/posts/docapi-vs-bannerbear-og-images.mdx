@@ -1,0 +1,176 @@
+---
+title: "DocAPI vs Bannerbear: Which is Better for OG Image Generation?"
+description: "A detailed comparison of DocAPI and Bannerbear for generating Open Graph images and screenshots. Learn which tool fits your use case."
+date: "2024-12-25"
+author: "Siwan"
+---
+
+When it comes to generating OG images programmatically, developers often compare different tools to find the right fit. Two popular options are **DocAPI** and **Bannerbear**. But they solve different problems.
+
+Let's break down when to use each.
+
+---
+
+## What is Bannerbear?
+
+[Bannerbear](https://www.bannerbear.com) is a template-based image generation platform. You design templates in their visual editor, then use their API to populate those templates with dynamic data.
+
+**Best for:**
+- Marketing teams generating social images at scale
+- E-commerce product images with consistent branding
+- Certificate or badge generation
+- Video thumbnail automation
+
+**How it works:**
+1. Design a template in Bannerbear's editor
+2. Define dynamic text/image layers
+3. Call their API with your data
+4. Receive a generated image
+
+---
+
+## What is DocAPI?
+
+[DocAPI](https://www.docapi.co) is a screenshot and PDF generation API. Point it at any URL or HTML, and it captures exactly what a real browser renders.
+
+**Best for:**
+- Capturing existing web pages as OG images
+- Screenshot automation for documentation
+- HTML to PDF conversion
+- Dynamic previews of user-generated content
+
+**How it works:**
+1. Send a URL or HTML to the API
+2. Specify dimensions (1200x630 for OG images)
+3. Receive a pixel-perfect screenshot
+
+---
+
+## Comparison for OG Image Generation
+
+| Feature | DocAPI | Bannerbear |
+|---------|--------|------------|
+| **Approach** | Screenshot existing pages | Template-based generation |
+| **Setup time** | Minutes | Hours (template design) |
+| **Design flexibility** | Use your existing site design | Limited to template editor |
+| **Dynamic content** | Capture any URL | Populate predefined fields |
+| **Pricing** | From $9/month | From $49/month |
+| **Free tier** | 100 screenshots/month | 30 images/month |
+| **Best for** | Developers | Marketing teams |
+
+---
+
+## When to Use DocAPI
+
+### 1. You Already Have a Great Landing Page
+
+If your website looks good, why redesign it as a template? DocAPI captures your page exactly as users see it.
+
+```javascript
+const response = await fetch('https://api.docapi.co/v1/screenshot', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'your-api-key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    url: 'https://yoursite.com/blog/my-post',
+    options: {
+      width: 1200,
+      height: 630,
+      type: 'png'
+    }
+  })
+});
+
+const ogImage = await response.arrayBuffer();
+```
+
+### 2. Blog Post Previews
+
+Generate OG images for blog posts automatically. Point the API at each post URL and capture the hero section.
+
+### 3. Dynamic User Content
+
+If users create pages, profiles, or content on your platform, screenshot those pages for social previews without maintaining templates.
+
+### 4. Cost-Sensitive Projects
+
+At $9/month for 1,000 screenshots vs $49/month for 1,000 images on Bannerbear, DocAPI is more economical for screenshot-based workflows.
+
+---
+
+## When to Use Bannerbear
+
+### 1. Consistent Brand Templates
+
+If every OG image needs to follow a strict brand template with specific fonts, colors, and layouts—Bannerbear's template system ensures consistency.
+
+### 2. Data-Driven Images
+
+Need to generate images from structured data (product name, price, rating)? Bannerbear excels at mapping data fields to image layers.
+
+### 3. Marketing Automation
+
+For marketing teams who need to generate hundreds of variations of the same design, Bannerbear's template approach is more efficient.
+
+### 4. Non-Web Content
+
+If your content doesn't exist as a web page, you'll need to design it somewhere. Bannerbear's templates work well here.
+
+---
+
+## The Hybrid Approach
+
+Many teams use both:
+
+- **DocAPI** for capturing existing pages (landing pages, blog posts, documentation)
+- **Bannerbear** for marketing campaigns with strict brand templates
+
+---
+
+## Real Example: OG Image for This Blog
+
+This blog post's OG image was generated using DocAPI. We simply pointed our API at the blog post URL with dimensions of 1200x630:
+
+```javascript
+await fetch('https://api.docapi.co/v1/screenshot', {
+  method: 'POST',
+  headers: {
+    'x-api-key': process.env.DOCAPI_KEY,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    url: 'https://www.docapi.co/blog/docapi-vs-bannerbear-og-images',
+    options: { width: 1200, height: 630, type: 'png' }
+  })
+});
+```
+
+No template design. No additional tools. Just a URL and an API call.
+
+---
+
+## Conclusion
+
+**Choose DocAPI if:**
+- You want to capture existing web pages
+- You need a simple, fast setup
+- Budget is a concern
+- You're a developer who prefers code over visual editors
+
+**Choose Bannerbear if:**
+- You need strict template-based generation
+- You're generating images from structured data
+- Your marketing team needs a visual editor
+- Brand consistency across hundreds of variations is critical
+
+---
+
+## Try It Free
+
+Want to see how DocAPI handles OG image generation?
+
+- **[Free OG Image Generator](/tools/og-image-generator)** - No signup required
+- **[Get API Access](https://app.docapi.co)** - 100 free screenshots/month
+- **[Documentation](/docs)** - Full API reference
