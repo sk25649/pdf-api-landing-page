@@ -7,6 +7,14 @@ export type StatKey =
   | "og_images_generated"
   | "resumes_created";
 
+export type FunnelEventKey =
+  | "signup_page_view"
+  | "signup_form_start"
+  | "signup_submit"
+  | "signup_success"
+  | "signup_error"
+  | "signup_github_click";
+
 /**
  * Increment a stat counter
  * Returns the new count
@@ -79,4 +87,53 @@ export async function getTotalDocuments(): Promise<number> {
     stats.og_images_generated +
     stats.resumes_created
   );
+}
+
+/**
+ * Track a funnel event
+ */
+export async function trackFunnelEvent(key: FunnelEventKey): Promise<number> {
+  try {
+    const newCount = await kv.incr(key);
+    return newCount;
+  } catch (error) {
+    console.error(`Failed to track funnel event ${key}:`, error);
+    return -1;
+  }
+}
+
+/**
+ * Get all funnel stats
+ */
+export async function getFunnelStats(): Promise<Record<FunnelEventKey, number>> {
+  try {
+    const [pageView, formStart, submit, success, error, githubClick] =
+      await Promise.all([
+        kv.get<number>("signup_page_view"),
+        kv.get<number>("signup_form_start"),
+        kv.get<number>("signup_submit"),
+        kv.get<number>("signup_success"),
+        kv.get<number>("signup_error"),
+        kv.get<number>("signup_github_click"),
+      ]);
+
+    return {
+      signup_page_view: pageView ?? 0,
+      signup_form_start: formStart ?? 0,
+      signup_submit: submit ?? 0,
+      signup_success: success ?? 0,
+      signup_error: error ?? 0,
+      signup_github_click: githubClick ?? 0,
+    };
+  } catch (error) {
+    console.error("Failed to get funnel stats:", error);
+    return {
+      signup_page_view: 0,
+      signup_form_start: 0,
+      signup_submit: 0,
+      signup_success: 0,
+      signup_error: 0,
+      signup_github_click: 0,
+    };
+  }
 }

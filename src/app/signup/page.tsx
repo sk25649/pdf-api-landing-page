@@ -1,21 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
+function track(event: string) {
+  fetch("/api/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event }),
+  }).catch(() => {});
+}
+
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const hasTrackedFormStart = useRef(false);
+  const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    track("signup_page_view");
+  }, []);
+
+  const handleFormStart = () => {
+    if (!hasTrackedFormStart.current) {
+      hasTrackedFormStart.current = true;
+      track("signup_form_start");
+    }
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    track("signup_submit");
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -26,16 +49,19 @@ export default function SignupPage() {
     });
 
     if (error) {
+      track("signup_error");
       toast.error(error.message);
       setLoading(false);
       return;
     }
 
-    toast.success("Check your email to confirm your account");
-    setLoading(false);
+    track("signup_success");
+    toast.success("Account created successfully!");
+    router.push("/dashboard");
   };
 
   const handleGitHubLogin = async () => {
+    track("signup_github_click");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
@@ -65,6 +91,7 @@ export default function SignupPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={handleFormStart}
               required
             />
           </div>

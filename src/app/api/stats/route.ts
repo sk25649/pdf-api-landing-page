@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { getAllStats, getTotalDocuments } from "@/lib/stats";
+import { getAllStats, getTotalDocuments, getFunnelStats } from "@/lib/stats";
 
 export async function GET() {
   try {
-    const [stats, total] = await Promise.all([
+    const [stats, total, funnel] = await Promise.all([
       getAllStats(),
       getTotalDocuments(),
+      getFunnelStats(),
     ]);
 
     return NextResponse.json({
       ...stats,
       total_documents: total,
+      signup_funnel: funnel,
     });
   } catch (error) {
     console.error("Failed to fetch stats:", error);
