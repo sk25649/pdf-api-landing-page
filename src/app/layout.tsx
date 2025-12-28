@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
@@ -87,8 +88,62 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "Doc API",
+        url: siteUrl,
+        logo: {
+          "@type": "ImageObject",
+          url: `${siteUrl}/og-image.png`,
+        },
+        sameAs: [],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "Doc API",
+        publisher: {
+          "@id": `${siteUrl}/#organization`,
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "Doc API",
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Web",
+        description:
+          "Simple HTML to PDF API. Generate PDFs and screenshots programmatically in seconds.",
+        url: siteUrl,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+          description: "Free tier with 100 API calls/month",
+        },
+        featureList: [
+          "HTML to PDF conversion",
+          "Screenshot generation",
+          "Invoice generation",
+          "OG image generation",
+        ],
+      },
+    ],
+  };
+
   return (
     <html lang="en">
+      <head>
+        <Script
+          id="json-ld"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-screen flex-col`}
       >
