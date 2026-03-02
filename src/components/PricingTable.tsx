@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -138,6 +138,62 @@ export function PricingTable() {
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        {/* AI Agent plan */}
+        <div className="mx-auto mt-8 max-w-6xl">
+          <div className="rounded-xl border bg-muted/30 p-6 md:p-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">AI Agent plan</span>
+                </div>
+                <h3 className="text-xl font-bold">Pay-per-use with USDC</h3>
+                <p className="max-w-xl text-sm text-muted-foreground">
+                  For AI agents that register and pay programmatically. No monthly
+                  commitment, no credit card. Register via{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    POST /api/register
+                  </code>
+                  , pay with USDC on Base, and get{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    X-Credits-Remaining
+                  </code>{" "}
+                  on every response so your software tops up automatically.
+                </p>
+                <ul className="grid gap-1.5 sm:grid-cols-2">
+                  {[
+                    "10 free calls on registration",
+                    "50 credits per 1 USDC",
+                    "No monthly commitment",
+                    "Self-managing credit topup",
+                    "Dedicated USDC wallet address",
+                    "Optional low-balance email alert",
+                  ].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="shrink-0 space-y-3 md:text-right">
+                <div>
+                  <div className="text-4xl font-bold">$0.02</div>
+                  <div className="text-sm text-muted-foreground">per API call</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">1 USDC = 50 credits</div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button asChild variant="outline">
+                    <Link href="/docs#ai-agents">Read agent docs</Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Base mainnet · No signup</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

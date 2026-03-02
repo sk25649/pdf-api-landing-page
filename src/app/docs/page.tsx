@@ -4,11 +4,11 @@ import { CodeBlock } from "@/components/docs/CodeBlock";
 export const metadata: Metadata = {
   title: "Documentation",
   description:
-    "Complete API documentation for Doc API. Learn how to generate PDFs and screenshots from HTML with code examples in cURL, Node.js, Python, and PHP.",
+    "Complete API documentation for Doc API. Human signup via dashboard or programmatic agent registration via POST /api/register. Generate PDFs with USDC credits or monthly plans.",
   openGraph: {
     title: "API Documentation - Doc API",
     description:
-      "Complete API documentation for Doc API. Generate PDFs and screenshots from HTML.",
+      "Complete API documentation for Doc API. Generate PDFs and screenshots from HTML. Agent-native: register via API, pay with USDC, self-managing credits.",
   },
 };
 
@@ -20,15 +20,72 @@ export default function DocsPage() {
         Everything you need to integrate Doc API into your application.
       </p>
 
+      {/* Agent Skill */}
+      <section id="claude-code-skill" className="scroll-mt-20">
+        <h2>Agent Skill</h2>
+        <p>
+          The fastest way to integrate DocAPI into any agent workflow is via
+          our official{" "}
+          <a href="https://skills.sh/doc-api-llc/docapi-skill/docapi" target="_blank" rel="noopener noreferrer">
+            skills.sh skill
+          </a>
+          . It works with 43+ supported agents — including Claude Code, GPT,
+          Gemini, Cursor, and more. Install it once and your agent can generate
+          PDFs, capture screenshots, create invoices, register for an account,
+          and manage USDC credits — all without reading documentation or writing
+          integration code from scratch.
+        </p>
+
+        <h3>Installation</h3>
+        <CodeBlock
+          language="bash"
+          code={`npx skills add https://github.com/doc-api-llc/docapi-skill --skill docapi`}
+        />
+
+        <h3>What the skill enables</h3>
+        <p>Once installed, your agent can:</p>
+        <ul>
+          <li>Register for a DocAPI account and receive an API key programmatically</li>
+          <li>Generate PDFs from HTML with full formatting control (page size, margins, fonts, backgrounds)</li>
+          <li>Capture full-page screenshots of URLs or HTML content</li>
+          <li>Generate structured invoice PDFs from line-item data</li>
+          <li>Check credit balance and top up via USDC on Base mainnet</li>
+          <li>Monitor <code>X-Credits-Remaining</code> and handle proactive topups automatically</li>
+        </ul>
+
+        <h3>Environment variables</h3>
+        <p>The skill uses two environment variables set at registration time:</p>
+        <CodeBlock
+          language="bash"
+          code={`DOCAPI_KEY=pk_...                                           # API key
+DOCAPI_USDC_ADDRESS=0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396  # payment address`}
+        />
+
+        <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4">
+          <p className="m-0 text-sm">
+            The skill is open source. View the full implementation and tools at{" "}
+            <a href="https://skills.sh/doc-api-llc/docapi-skill/docapi" target="_blank" rel="noopener noreferrer">
+              skills.sh/doc-api-llc/docapi-skill/docapi
+            </a>.
+          </p>
+        </div>
+      </section>
+
       {/* Quick Start */}
       <section id="quick-start" className="scroll-mt-20">
         <h2>Quick Start</h2>
         <p>Get up and running with Doc API in under 5 minutes.</p>
 
-        <h3>Step 1: Sign up and get your API key</h3>
+        <h3>Step 1: Get your API key</h3>
         <p>
-          Create a free account and get your API key from the{" "}
-          <a href="/dashboard">dashboard</a>.
+          <strong>Human developers:</strong> Create a free account and get your
+          API key from the <a href="/dashboard">dashboard</a>.
+        </p>
+        <p>
+          <strong>AI agents:</strong> Install the{" "}
+          <a href="#claude-code-skill">Claude Code skill</a> for the fastest
+          path, or register programmatically via the{" "}
+          <a href="#ai-agents">AI Agent Integration</a> endpoints directly.
         </p>
 
         <h3>Step 2: Make your first request</h3>
@@ -75,6 +132,191 @@ export default function DocsPage() {
             commit it to version control or expose it in client-side code.
           </p>
         </div>
+      </section>
+
+      {/* AI Agent Integration */}
+      <section id="ai-agents" className="scroll-mt-20">
+        <h2>AI Agent Integration</h2>
+        <p>
+          DocAPI is designed to be fully operable by AI agents — no human in
+          the loop required. Agents register via API, receive a USDC payment
+          address, and build services that self-manage their own credit balance.
+        </p>
+
+        <h3>POST /api/register</h3>
+        <p>
+          Register an agent account programmatically. Returns an API key, USDC
+          address, rate information, and ready-to-use integration code — everything
+          needed to build a self-funding service.
+        </p>
+
+        <CodeBlock
+          language="bash"
+          code={`curl -X POST https://www.docapi.co/api/register \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "email": "myagent@example.com",
+    "notify_email": "ops@yourcompany.com"
+  }'`}
+        />
+
+        <p>Both fields are optional. If <code>email</code> is omitted, an agent-specific address is auto-generated. <code>notify_email</code> is for human fallback alerts when the payment wallet runs dry.</p>
+
+        <h4>Response</h4>
+        <CodeBlock
+          language="json"
+          code={`{
+  "api_key": "pk_4a7f2b9c1d3e...",
+  "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396",
+  "free_calls": 10,
+  "credits_per_usdc": 50,
+  "network": "base-mainnet",
+  "rate": "$0.02 per API call",
+  "auto_topup": {
+    "header": "X-Credits-Remaining",
+    "recommended_threshold": 50,
+    "recommended_topup_usdc": 10
+  },
+  "on_exhausted": {
+    "http_status": 402,
+    "body": { "error": "credits_exhausted", "usdc_address": "0x..." }
+  },
+  "notifications": {
+    "low_balance_email": "ops@yourcompany.com",
+    "threshold": 50,
+    "note": "One email per 24h when credits fall below threshold"
+  },
+  "docs": "https://www.docapi.co/docs"
+}`}
+        />
+
+        <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4">
+          <p className="m-0 text-sm">
+            <strong>Rate limit:</strong> 5 registrations per day per IP. Each
+            registration creates a dedicated Coinbase CDP smart account wallet
+            on Base mainnet for USDC payments.
+          </p>
+        </div>
+
+        <h3>GET /api/topup</h3>
+        <p>Check an agent account&apos;s current credit balance and USDC address.</p>
+
+        <CodeBlock
+          language="bash"
+          code={`curl https://www.docapi.co/api/topup \\
+  -H "x-api-key: pk_4a7f2b9c1d3e..."`}
+        />
+
+        <h4>Response</h4>
+        <CodeBlock
+          language="json"
+          code={`{
+  "credits": 487,
+  "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396",
+  "rate": "$0.02 per call (50 credits per USDC)",
+  "suggested_topup_usdc": 10
+}`}
+        />
+
+        <h3>X-Credits-Remaining header</h3>
+        <p>
+          Every successful API response includes this header with the remaining
+          credit balance for agent accounts. Use it to trigger proactive topups
+          before credits are exhausted.
+        </p>
+
+        <CodeBlock
+          language="http"
+          code={`HTTP/2 200
+Content-Type: application/pdf
+X-Credits-Remaining: 47`}
+        />
+
+        <h3>USDC payment flow</h3>
+        <p>
+          Send USDC to the <code>usdc_address</code> returned at registration
+          on Base mainnet. Credits are applied within seconds via webhook.
+        </p>
+        <ul>
+          <li>1 USDC = 50 credits ($0.02/call)</li>
+          <li>Minimum: any amount (even $0.10 USDC = 5 credits)</li>
+          <li>Network: Base mainnet only</li>
+          <li>Token: USDC (<code>0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code>)</li>
+        </ul>
+
+        <h3>Self-managing integration</h3>
+        <p>
+          The recommended pattern: watch <code>X-Credits-Remaining</code> on
+          every response and trigger a USDC transfer when it drops below 50.
+          The service never hits a 402.
+        </p>
+
+        <CodeBlock
+          language="python"
+          title="Python (with Coinbase AgentKit)"
+          code={`import requests
+from coinbase_agentkit import CdpAgentkitWrapper
+
+API_KEY = "pk_..."
+USDC_ADDRESS = "0x..."  # from registration response
+THRESHOLD = 50
+TOPUP_USDC = 10
+
+agentkit = CdpAgentkitWrapper()
+_topup_pending = False
+
+def generate_pdf(html: str) -> bytes:
+    global _topup_pending
+    resp = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={"x-api-key": API_KEY},
+        json={"html": html},
+        timeout=30,
+    )
+
+    remaining = int(resp.headers.get("X-Credits-Remaining", 999))
+    if remaining < THRESHOLD and not _topup_pending:
+        _topup_pending = True
+        try:
+            agentkit.run(f"Send {TOPUP_USDC} USDC to {USDC_ADDRESS} on base-mainnet")
+        finally:
+            _topup_pending = False
+
+    resp.raise_for_status()
+    return resp.content`}
+        />
+
+        <CodeBlock
+          language="javascript"
+          title="JavaScript (with Coinbase AgentKit)"
+          code={`import { sendUsdc } from '@coinbase/agentkit';
+
+const API_KEY = 'pk_...';
+const USDC_ADDRESS = '0x...'; // from registration response
+const THRESHOLD = 50;
+const TOPUP_USDC = 10;
+
+let topupInProgress = false;
+
+async function generatePdf(html) {
+  const res = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ html }),
+  });
+
+  const remaining = parseInt(res.headers.get('X-Credits-Remaining') ?? '999');
+  if (remaining < THRESHOLD && !topupInProgress) {
+    topupInProgress = true;
+    sendUsdc({ to: USDC_ADDRESS, amount: TOPUP_USDC, network: 'base-mainnet' })
+      .catch(console.error)
+      .finally(() => { topupInProgress = false; });
+  }
+
+  if (!res.ok) throw new Error(\`DocAPI error: \${res.status}\`);
+  return res.arrayBuffer();
+}`}
+        />
       </section>
 
       {/* Endpoints */}
@@ -307,6 +549,11 @@ fs.writeFileSync('output.pdf', Buffer.from(pdf));`}
                 <td><code>usage_limit_exceeded</code></td>
                 <td>429</td>
                 <td>Monthly API call limit reached. Upgrade your plan.</td>
+              </tr>
+              <tr>
+                <td><code>credits_exhausted</code></td>
+                <td>402</td>
+                <td>Agent account has no credits remaining. Send USDC to your usdc_address to top up.</td>
               </tr>
               <tr>
                 <td><code>generation_failed</code></td>

@@ -5,8 +5,19 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navigation = [
+  { name: "Agent Skill", href: "#claude-code-skill" },
   { name: "Quick Start", href: "#quick-start" },
   { name: "Authentication", href: "#authentication" },
+  {
+    name: "AI Agent Integration",
+    href: "#ai-agents",
+    children: [
+      { name: "POST /api/register", href: "#ai-agents" },
+      { name: "GET /api/topup", href: "#ai-agents" },
+      { name: "X-Credits-Remaining", href: "#ai-agents" },
+      { name: "USDC payment flow", href: "#ai-agents" },
+    ],
+  },
   {
     name: "Endpoints",
     href: "#endpoints",

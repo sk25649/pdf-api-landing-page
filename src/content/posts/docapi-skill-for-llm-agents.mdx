@@ -1,0 +1,234 @@
+---
+title: "How to Use the DocAPI Agent Skill"
+description: "A step-by-step guide to installing the DocAPI skill for AI agents. Works with 43+ agents including Claude Code, GPT, Gemini, and Cursor. Generate PDFs, capture screenshots, and manage USDC credits — no integration code required."
+date: "2026-03-08"
+slug: "docapi-skill-for-llm-agents"
+---
+
+If you're building with an AI agent and need to generate PDFs, the DocAPI skill is the fastest path from zero to working PDF generation. Install it once, and your agent can register for an account, generate PDFs from HTML, take screenshots, create invoices, and manage its own USDC credits — all without you writing any integration code.
+
+The skill is published on [skills.sh](https://skills.sh/doc-api-llc/docapi-skill/docapi) and works with 43+ agents including Claude Code, GPT, Gemini, Cursor, and others. One install, any agent.
+
+This post walks through installation, first use, and the one common mistake that trips people up.
+
+## What the skill actually does
+
+The DocAPI skill gives your agent a set of pre-built tools for the full DocAPI workflow:
+
+- **Self-registration** — the agent calls `POST /api/register` and gets its own API key and USDC wallet address
+- **PDF generation** — HTML to PDF with full formatting options (page size, margins, fonts, backgrounds)
+- **Screenshots** — full-page captures of URLs or HTML content
+- **Invoice generation** — structured invoice PDFs from line-item data (no API key required)
+- **Credit management** — check balance via `GET /api/topup`, monitor `X-Credits-Remaining` on every response, top up with USDC on Base mainnet
+
+Once the skill is installed, you don't write any of this logic yourself. You tell Claude Code what you need, and it knows how to call the right endpoints, handle errors, and monitor its own credits.
+
+## Step 1: Install the skill globally
+
+This is the most important step — and where most people get it wrong. **Install the skill at the global level, not inside a project.**
+
+```bash
+npx skills add https://github.com/doc-api-llc/docapi-skill --skill docapi
+```
+
+When you run this, the skill gets added to your global skills directory:
+
+```
+~/.claude/skills/docapi/
+```
+
+This makes the skill available in every project, every session, automatically. You install it once and forget it.
+
+## Step 2: Verify installation
+
+After installation, you can confirm it's in place:
+
+```bash
+ls ~/.claude/skills/
+```
+
+You should see `docapi` listed. If you don't see it, check the troubleshooting section at the bottom of this post.
+
+## Step 3: Ask your agent to register
+
+Start an agent session in any project and ask it to set up DocAPI:
+
+```
+Set up DocAPI for this project. Register for an account and save the API key and USDC address.
+```
+
+Your agent will:
+1. Call `POST https://www.docapi.co/api/register`
+2. Receive an API key (`pk_...`) and a USDC wallet address on Base mainnet
+3. Save them as environment variables — `DOCAPI_KEY` and `DOCAPI_USDC_ADDRESS`
+4. Confirm your 10 free starting credits
+
+The registration happens in seconds. No browser, no email confirmation, no dashboard.
+
+## Step 4: Generate your first PDF
+
+Once registered, ask your agent to generate a PDF:
+
+```
+Generate a PDF from this HTML and save it as report.pdf:
+<h1>Q1 Report</h1><p>Revenue: $120,000</p>
+```
+
+Behind the scenes, the agent calls:
+
+```bash
+curl -X POST https://api.docapi.co/v1/pdf \
+  -H "x-api-key: $DOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>Q1 Report</h1><p>Revenue: $120,000</p>"}' \
+  --output report.pdf
+```
+
+The skill handles authentication, error checking, and the `X-Credits-Remaining` header automatically.
+
+## Step 5: Take a screenshot
+
+```
+Take a full-page screenshot of https://www.docapi.co and save it as screenshot.png
+```
+
+The agent calls `POST /v1/screenshot` with the URL. For HTML content instead of a URL:
+
+```
+Take a screenshot of this HTML at 1280x800 and save it as preview.png:
+<div style="padding: 40px; font-family: sans-serif;"><h1>Preview</h1></div>
+```
+
+## Step 6: Generate an invoice
+
+Invoice generation doesn't require an API key — it's a free endpoint:
+
+```
+Generate an invoice PDF for:
+- Client: Acme Corp
+- Service: API development, 40 hours at $150/hr
+- Due: March 31, 2026
+Save it as invoice.pdf
+```
+
+Claude Code calls `POST https://www.docapi.co/api/tools/generate-invoice` with structured data and saves the result.
+
+## Step 7: Check and top up credits
+
+When you need to check your balance:
+
+```
+Check my DocAPI credit balance
+```
+
+The agent calls `GET /api/topup` and reports back:
+
+```json
+{
+  "credits": 7,
+  "usdc_address": "0x2B984...",
+  "rate": "$0.02 per call (50 credits per USDC)"
+}
+```
+
+To add credits, send USDC to your `DOCAPI_USDC_ADDRESS` on Base mainnet. 1 USDC = 50 credits. Credits appear within seconds via webhook.
+
+```
+Send 10 USDC to my DocAPI wallet to top up credits
+```
+
+If you have a Coinbase AgentKit wallet configured, your agent can send the USDC directly. Otherwise, send it manually from any Base mainnet wallet.
+
+---
+
+## Troubleshooting: The global vs. project-level mistake
+
+The most common issue people hit: **the skill is installed at the project level instead of globally, and stops working when you switch projects.**
+
+Here's what happens when you install at the project level:
+
+```bash
+# Inside a specific project — DON'T do this
+cd ~/my-project
+npx skills add https://github.com/doc-api-llc/docapi-skill --skill docapi
+```
+
+This creates `.claude/skills/docapi/` inside your project directory. The skill works in that project but nowhere else. Switch projects, start a new agent session, and the skill is gone. You have to re-register, your API key and USDC address aren't available, and your agent doesn't know what DocAPI is.
+
+**The fix: install globally.**
+
+If you've already installed at the project level, here's how to move it:
+
+```bash
+# Remove the project-level install
+rm -rf .claude/skills/docapi
+
+# Install globally
+npx skills add https://github.com/doc-api-llc/docapi-skill --skill docapi
+```
+
+Then verify:
+
+```bash
+ls ~/.claude/skills/
+# Should show: docapi
+```
+
+**Global means it's installed here:**
+```
+~/.claude/skills/docapi/   ← correct, works everywhere, all agents
+```
+
+**Project-level means it's installed here:**
+```
+~/your-project/.claude/skills/docapi/   ← only works in this one project
+```
+
+### Other common issues
+
+**"My agent doesn't seem to know about the skill"**
+
+Restart your agent session after installing. Skills are loaded at session start. If you installed while a session was running, it won't be available until you restart.
+
+**"I got an API key but lost it"**
+
+Your `DOCAPI_KEY` and `DOCAPI_USDC_ADDRESS` should be stored as environment variables. Check your `.env` file or wherever Claude Code saved them. If they're gone, you can register again — each registration creates a new account with 10 fresh free credits.
+
+**"My credits ran out but I sent USDC and nothing happened"**
+
+Credits arrive via webhook within seconds of the USDC transfer confirming on Base. If it's been more than a minute, check that:
+1. You sent USDC (not ETH or another token)
+2. You sent it on Base mainnet (not Ethereum mainnet or Base Sepolia)
+3. You sent it to the correct address (your `DOCAPI_USDC_ADDRESS`, not someone else's)
+
+Check your balance with `GET /api/topup` to confirm the current state.
+
+---
+
+## What this looks like in a real workflow
+
+Here's how a complete agent session using the skill might look, from start to working PDF generation:
+
+```
+You: Set up DocAPI and generate a PDF invoice template for a software
+     consultancy. Include a header with logo placeholder, line items
+     table, payment terms, and bank details section. Save the template
+     as invoice-template.pdf
+
+Agent:
+  → Checks for DOCAPI_KEY in environment
+  → Not found — calls POST /api/register
+  → Received: api_key=pk_4a7f2b..., usdc_address=0x2B984..., free_calls=10
+  → Saved DOCAPI_KEY and DOCAPI_USDC_ADDRESS to .env
+  → Building invoice HTML with requested sections...
+  → Calling POST https://api.docapi.co/v1/pdf
+  → X-Credits-Remaining: 9
+  → Saved invoice-template.pdf (48KB)
+  → Done. You have 9 credits remaining. Send USDC to 0x2B984... to top up.
+```
+
+The whole thing — registration, PDF generation, credit monitoring — happens in one prompt. That's what the skill is for.
+
+---
+
+The DocAPI skill is published and maintained at [skills.sh/doc-api-llc/docapi-skill/docapi](https://skills.sh/doc-api-llc/docapi-skill/docapi). Full API documentation is at [docapi.co/docs](https://www.docapi.co/docs).

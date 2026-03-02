@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Check } from "lucide-react";
+import { Check, Bot } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +16,11 @@ import { CheckoutButton } from "./CheckoutButton";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing for Doc API. Start free with 100 API calls/month. Scale as you grow with plans starting at $19/month.",
+    "Simple, transparent pricing for Doc API. Human plans from $0–$99/month. AI agents pay $0.02/call with USDC — no monthly commitment, register via API.",
   openGraph: {
     title: "Pricing - Doc API",
     description:
-      "Simple, transparent pricing for Doc API. Start free with 100 API calls/month.",
+      "Human plans from $0–$99/month. AI agents pay $0.02/call with USDC — no monthly commitment.",
   },
 };
 
@@ -68,7 +69,7 @@ export default async function PricingPage() {
       <div className="text-center space-y-4 mb-12">
         <h1 className="text-4xl font-bold">Simple, transparent pricing</h1>
         <p className="text-muted-foreground text-lg">
-          Choose the plan that fits your needs
+          Monthly plans for humans. Pay-per-use USDC for AI agents.
         </p>
       </div>
 
@@ -120,6 +121,59 @@ export default async function PricingPage() {
             </CardFooter>
           </Card>
         ))}
+      </div>
+
+      {/* Agent / Pay-per-use section */}
+      <div className="mt-16 max-w-6xl mx-auto">
+        <div className="rounded-xl border bg-muted/30 p-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-primary">AI Agent plan</span>
+              </div>
+              <h2 className="text-2xl font-bold">Pay-per-use with USDC</h2>
+              <p className="max-w-lg text-muted-foreground">
+                Built for AI agents that register and pay programmatically. No monthly
+                commitment, no credit card, no dashboard required. Register via API and
+                pay with USDC on Base mainnet.
+              </p>
+              <ul className="space-y-2">
+                {[
+                  "Register via POST /api/register — one request, no human steps",
+                  "10 free calls on registration to test before funding",
+                  "50 credits per 1 USDC ($0.02/call)",
+                  "X-Credits-Remaining header on every response",
+                  "Self-managing: software tops up automatically via Coinbase AgentKit",
+                  "Optional notify_email for human fallback alerts",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="shrink-0 space-y-4 text-center md:text-right">
+              <div>
+                <div className="text-5xl font-bold">$0.02</div>
+                <div className="text-muted-foreground">per API call</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  1 USDC = 50 credits
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button asChild>
+                  <Link href="/docs#ai-agents">Read the agent docs</Link>
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  No signup required · Base mainnet
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

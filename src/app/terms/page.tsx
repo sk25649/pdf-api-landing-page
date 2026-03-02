@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms of Service - DocAPI",
   description:
-    "Terms of Service for DocAPI PDF generation API and free tools.",
+    "Terms of Service for DocAPI PDF generation API, free tools, and AI agent programmatic registration.",
 };
 
 export default function TermsPage() {
@@ -11,17 +11,19 @@ export default function TermsPage() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
-        <p className="text-muted-foreground">Last updated: December 25, 2024</p>
+        <p className="text-muted-foreground">Last updated: March 2, 2026</p>
       </div>
 
       <div className="space-y-8">
         <section className="rounded-lg border bg-card p-6">
           <h2 className="text-xl font-semibold mb-4">1. Acceptance of Terms</h2>
           <p className="text-muted-foreground leading-relaxed">
-            By accessing or using DocAPI&apos;s services, including our API and free
-            tools (such as the Invoice Generator), you agree to be bound by these
-            Terms of Service. If you do not agree to these terms, please do not
-            use our services.
+            By accessing or using DocAPI&apos;s services — including our API, free
+            tools (such as the Invoice Generator), and programmatic agent
+            registration — you agree to be bound by these Terms of Service. If
+            you do not agree to these terms, please do not use our services.
+            These terms apply equally to human users and to AI agents or
+            automated systems acting on behalf of a person or organization.
           </p>
         </section>
 
@@ -31,7 +33,15 @@ export default function TermsPage() {
           <ul className="space-y-3 text-muted-foreground">
             <li className="flex gap-3">
               <span className="text-primary font-bold">•</span>
-              <span><strong className="text-foreground">PDF Generation API:</strong> A paid service for generating PDF documents from HTML content programmatically.</span>
+              <span><strong className="text-foreground">PDF Generation API:</strong> A service for generating PDF documents and screenshots from HTML content programmatically, accessible via API key.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-primary font-bold">•</span>
+              <span><strong className="text-foreground">Agent Registration API:</strong> A programmatic endpoint (<code>POST /api/register</code>) that allows AI agents and automated systems to register for an account, receive an API key, and obtain a USDC payment address — without human interaction.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-primary font-bold">•</span>
+              <span><strong className="text-foreground">USDC Credit System:</strong> A pay-per-use credit system for agent accounts. Credits are purchased by sending USDC to a dedicated wallet address on Base mainnet. 1 USDC = 50 credits ($0.02 per API call).</span>
             </li>
             <li className="flex gap-3">
               <span className="text-primary font-bold">•</span>
@@ -109,25 +119,31 @@ export default function TermsPage() {
             <div className="border-l-4 border-blue-500 pl-4">
               <h3 className="font-semibold mb-2">4.1 Account Registration</h3>
               <p className="text-muted-foreground leading-relaxed">
-                To use our API service, you must create an account and obtain an API
-                key. You are responsible for maintaining the confidentiality of your
-                API key and for all activities that occur under your account.
+                Accounts may be created by human users via the sign-up flow, or
+                programmatically by AI agents via <code>POST /api/register</code>.
+                Programmatic registration is rate-limited to 5 registrations per day
+                per IP address. You are responsible for maintaining the
+                confidentiality of your API key and for all activities that occur
+                under your account, regardless of whether the account was created by
+                a human or an automated system.
               </p>
             </div>
 
             <div className="border-l-4 border-blue-500 pl-4">
               <h3 className="font-semibold mb-2">4.2 Usage Limits</h3>
               <p className="text-muted-foreground leading-relaxed">
-                API usage is subject to the limits of your subscription plan. We
-                reserve the right to throttle or suspend access if usage exceeds
-                reasonable limits or violates these terms.
+                For subscription accounts, API usage is subject to the limits of your
+                plan. For agent (USDC credit) accounts, usage is limited by available
+                credits. When credits reach zero, the API returns HTTP 402. We reserve
+                the right to throttle or suspend access if usage violates these terms
+                or is consistent with abuse.
               </p>
             </div>
 
             <div className="border-l-4 border-blue-500 pl-4">
               <h3 className="font-semibold mb-2">4.3 Prohibited Content</h3>
               <p className="text-muted-foreground leading-relaxed mb-3">
-                You may not use our API to generate PDFs containing:
+                You may not use our API to generate PDFs or screenshots containing:
               </p>
               <ul className="space-y-2 text-muted-foreground ml-4">
                 <li className="flex gap-2">
@@ -156,7 +172,92 @@ export default function TermsPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">5. Intellectual Property</h2>
+          <h2 className="text-xl font-semibold mb-6">5. USDC Credits and Cryptocurrency Payments</h2>
+
+          <div className="space-y-6">
+            <div className="border-l-4 border-violet-500 pl-4">
+              <h3 className="font-semibold mb-2">5.1 How Credits Work</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Agent accounts registered via <code>POST /api/register</code> receive
+                10 free credits on registration. Additional credits are purchased by
+                sending USDC (USD Coin) to the dedicated wallet address returned at
+                registration. The current rate is 50 credits per 1 USDC ($0.02 per
+                API call). Credits do not expire.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-violet-500 pl-4">
+              <h3 className="font-semibold mb-2">5.2 Blockchain Transactions Are Irreversible</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                USDC payments are processed on the Base blockchain (an Ethereum L2
+                network). Blockchain transactions are final and irreversible once
+                confirmed. DocAPI is not responsible for funds sent to an incorrect
+                address, transactions that fail due to network conditions, or losses
+                arising from user error. Always verify the USDC address before
+                sending funds.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-violet-500 pl-4">
+              <h3 className="font-semibold mb-2">5.3 No Refunds on Credits</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Credits are non-refundable once applied to an account. Unused credits
+                are not redeemable for USDC or any other currency. If an account is
+                terminated for violation of these terms, unused credits are forfeited.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-violet-500 pl-4">
+              <h3 className="font-semibold mb-2">5.4 Wallet Infrastructure</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Dedicated USDC addresses are generated and managed via Coinbase
+                Developer Platform (CDP). By using agent accounts, you acknowledge
+                that payment wallet infrastructure is subject to Coinbase&apos;s terms
+                of service. DocAPI periodically sweeps received USDC from agent wallets
+                to our treasury using gasless smart account transactions on Base mainnet.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-violet-500 pl-4">
+              <h3 className="font-semibold mb-2">5.5 Automated Topup</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                If you implement automated USDC topup using the <code>X-Credits-Remaining</code>{" "}
+                header pattern described in our documentation, you are solely responsible
+                for the logic, timing, and amounts of those automated transfers. DocAPI
+                is not liable for duplicate transfers, over-funding, or any losses
+                resulting from automated payment systems you build and operate.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-6">
+          <h2 className="text-xl font-semibold mb-6">6. Subscription Billing (Human Accounts)</h2>
+
+          <div className="space-y-6">
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold mb-2">6.1 Stripe Payments</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Monthly subscription plans are billed via Stripe. Subscriptions
+                auto-renew unless cancelled. Refunds for subscription charges are
+                handled at our discretion and subject to Stripe&apos;s policies.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold mb-2">6.2 Plan Changes and Cancellations</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                You may upgrade, downgrade, or cancel your subscription at any time
+                via your dashboard. Downgrading or cancelling takes effect at the end
+                of the current billing period. Unused calls do not roll over between
+                billing periods.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-6">
+          <h2 className="text-xl font-semibold mb-4">7. Intellectual Property</h2>
           <p className="text-muted-foreground leading-relaxed">
             You retain all rights to the content you create using our services.
             DocAPI retains all rights to its software, API, and services. You may
@@ -166,13 +267,18 @@ export default function TermsPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">6. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold mb-4">8. Limitation of Liability</h2>
           <div className="space-y-4 text-muted-foreground leading-relaxed">
             <p>
               To the maximum extent permitted by law, DocAPI shall not be liable for
               any indirect, incidental, special, consequential, or punitive damages,
               including but not limited to loss of profits, data, or business
               opportunities, arising from your use of our services.
+            </p>
+            <p>
+              DocAPI is not liable for losses arising from blockchain network failures,
+              irreversible cryptocurrency transactions, or the actions of automated
+              systems (including AI agents) operating under your API key.
             </p>
             <p>
               Our total liability for any claims arising from these terms or your
@@ -183,17 +289,18 @@ export default function TermsPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">7. Indemnification</h2>
+          <h2 className="text-xl font-semibold mb-4">9. Indemnification</h2>
           <p className="text-muted-foreground leading-relaxed">
             You agree to indemnify and hold harmless DocAPI and its officers,
             directors, employees, and agents from any claims, damages, losses, or
             expenses (including reasonable attorney fees) arising from your use of
-            our services or violation of these terms.
+            our services, violation of these terms, or the actions of any AI agent
+            or automated system operating under your API key.
           </p>
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">8. Modifications to Terms</h2>
+          <h2 className="text-xl font-semibold mb-4">10. Modifications to Terms</h2>
           <p className="text-muted-foreground leading-relaxed">
             We reserve the right to modify these terms at any time. We will notify
             users of material changes by posting the updated terms on our website.
@@ -203,17 +310,18 @@ export default function TermsPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">9. Termination</h2>
+          <h2 className="text-xl font-semibold mb-4">11. Termination</h2>
           <p className="text-muted-foreground leading-relaxed">
             We may suspend or terminate your access to our services at any time
             for violation of these terms or for any other reason at our sole
             discretion. Upon termination, your right to use our services will
-            immediately cease.
+            immediately cease. Unused USDC credits are forfeited upon termination
+            for cause. USDC already swept to our treasury is not returned.
           </p>
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">10. Governing Law</h2>
+          <h2 className="text-xl font-semibold mb-4">12. Governing Law</h2>
           <p className="text-muted-foreground leading-relaxed">
             These terms shall be governed by and construed in accordance with the
             laws of the State of Delaware, United States, without regard to its
@@ -222,7 +330,7 @@ export default function TermsPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">11. Contact Information</h2>
+          <h2 className="text-xl font-semibold mb-4">13. Contact Information</h2>
           <p className="text-muted-foreground leading-relaxed">
             If you have any questions about these Terms of Service, please contact
             us at{" "}

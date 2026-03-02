@@ -158,6 +158,12 @@ export default async function RootLayout({
             <nav className="flex items-center gap-6">
               <ToolsDropdown />
               <Link
+                href="/docs"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Docs
+              </Link>
+              <Link
                 href="/blog"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
@@ -196,7 +202,7 @@ export default async function RootLayout({
                   Doc API
                 </Link>
                 <p className="text-sm text-muted-foreground">
-                  Simple HTML to PDF API for developers
+                  HTML to PDF API for developers and AI agents
                 </p>
               </div>
               <nav className="flex gap-8">
