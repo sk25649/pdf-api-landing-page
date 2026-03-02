@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
     swept: string;
     txHash?: string;
     error?: string;
+    debug?: string;
   }[] = [];
 
   for (const agent of agents ?? []) {
@@ -96,6 +97,8 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      const paymasterUrl = process.env.CDP_PAYMASTER_URL;
+      let debugInfo = `paymasterUrl=${paymasterUrl ? "set" : "NOT SET"}`;
       try {
         const cdp = new CdpClient({
           apiKeyId: process.env.CDP_API_KEY_ID!,
@@ -104,17 +107,16 @@ export async function GET(request: NextRequest) {
         });
 
         // Smart accounts need their owner (server account) to be retrieved first.
-        // New agent wallets use naming convention: owner=agent-owner-{userId}, smart=agent-{userId}.
+        // New agent wallets use naming convention: owner=agent-owner-{safeId}, smart=agent-{safeId}.
+        // safeId = first 24 hex chars of UUID (strips hyphens), fits CDP 36-char name limit.
         // Legacy EOA wallets (no owner account) fall back to direct account retrieval.
-        const paymasterUrl = process.env.CDP_PAYMASTER_URL;
         let txHash: string;
-
         try {
-          console.log(`[sweep] Trying smart account path for ${agent.usdc_address} (user ${agent.user_id}), paymasterUrl=${paymasterUrl ?? "not set"}`);
-          const owner = await cdp.evm.getAccount({ name: `agent-owner-${agent.user_id}` });
-          console.log(`[sweep] Owner account: ${owner.address}`);
-          const smartAccount = await cdp.evm.getSmartAccount({ owner, name: `agent-${agent.user_id}` });
-          console.log(`[sweep] Smart account: ${smartAccount.address}`);
+          const safeId = agent.user_id.replace(/-/g, "").slice(0, 24);
+          const owner = await cdp.evm.getAccount({ name: `agent-owner-${safeId}` });
+          debugInfo += ` | owner=${owner.address}`;
+          const smartAccount = await cdp.evm.getSmartAccount({ owner, name: `agent-${safeId}` });
+          debugInfo += ` | smart=${smartAccount.address}`;
           const networkAccount = await smartAccount.useNetwork("base");
           const result = await networkAccount.transfer({
             to: treasury,
@@ -122,11 +124,11 @@ export async function GET(request: NextRequest) {
             token: "usdc" as const,
             ...(paymasterUrl ? { paymasterUrl } : {}),
           });
-          // Smart account transfer returns userOpHash; tx hash is only available after confirmation
           txHash = result.userOpHash;
+          debugInfo += ` | userOpHash=${txHash}`;
         } catch (smartErr) {
           const smartMsg = smartErr instanceof Error ? smartErr.message : String(smartErr);
-          console.warn(`[sweep] Smart account path failed for ${agent.usdc_address}: ${smartMsg}`);
+          debugInfo += ` | smartErr=${smartMsg}`;
           // Legacy EOA wallet — no smart account, needs ETH for gas
           const account = await cdp.evm.getAccount({ address: agent.usdc_address });
           const networkAccount = await account.useNetwork("base");
@@ -144,12 +146,12 @@ export async function GET(request: NextRequest) {
           .update({ usdc_credited_atomic: "0" })
           .eq("user_id", agent.user_id);
 
-        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash });
+        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash, debug: debugInfo });
         console.log(`Swept ${Number(balance) / USDC_DECIMALS} USDC from ${agent.usdc_address} → treasury tx: ${txHash}`);
       } catch (sweepErr) {
         const msg = sweepErr instanceof Error ? sweepErr.message : String(sweepErr);
         console.warn(`Sweep failed for ${agent.usdc_address} (credits already applied): ${msg}`);
-        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: "0", error: `sweep failed: ${msg}` });
+        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: "0", error: `sweep failed: ${msg}`, debug: debugInfo });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

@@ -28,10 +28,14 @@ async function createCdpWallet(userId: string): Promise<string> {
     apiKeySecret: process.env.CDP_API_KEY_SECRET!,
     walletSecret: process.env.CDP_WALLET_SECRET!,
   });
+  // CDP name limit: 36 chars, alphanumeric + hyphens.
+  // UUID is 36 chars but includes hyphens we must strip; we take the first 24 hex chars (96-bit uniqueness).
+  // agent-owner-{24} = 36 chars (exact limit); agent-{24} = 30 chars.
+  const safeId = userId.replace(/-/g, "").slice(0, 24);
   // Create a server account as the owner, then a smart account on top.
   // Smart accounts can use the Coinbase paymaster for gasless sweeps.
-  const owner = await cdp.evm.createAccount({ name: `agent-owner-${userId}` });
-  const smartAccount = await cdp.evm.createSmartAccount({ owner, name: `agent-${userId}` });
+  const owner = await cdp.evm.createAccount({ name: `agent-owner-${safeId}` });
+  const smartAccount = await cdp.evm.createSmartAccount({ owner, name: `agent-${safeId}` });
   return smartAccount.address;
 }
 
