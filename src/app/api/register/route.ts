@@ -22,14 +22,17 @@ function generateAgentEmail(): string {
   return `agent-${id}@docapi.co`;
 }
 
-async function createCdpWallet(): Promise<string> {
+async function createCdpWallet(userId: string): Promise<string> {
   const cdp = new CdpClient({
     apiKeyId: process.env.CDP_API_KEY_ID!,
     apiKeySecret: process.env.CDP_API_KEY_SECRET!,
     walletSecret: process.env.CDP_WALLET_SECRET!,
   });
-  const account = await cdp.evm.createAccount();
-  return account.address;
+  // Create a server account as the owner, then a smart account on top.
+  // Smart accounts can use the Coinbase paymaster for gasless sweeps.
+  const owner = await cdp.evm.createAccount({ name: `agent-owner-${userId}` });
+  const smartAccount = await cdp.evm.createSmartAccount({ owner, name: `agent-${userId}` });
+  return smartAccount.address;
 }
 
 export async function POST(request: NextRequest) {
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
   // Create CDP Server Wallet v2 account to receive USDC
   let usdcAddress: string;
   try {
-    usdcAddress = await createCdpWallet();
+    usdcAddress = await createCdpWallet(userId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Failed to create CDP wallet:", msg);

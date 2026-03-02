@@ -102,13 +102,36 @@ export async function GET(request: NextRequest) {
           apiKeySecret: process.env.CDP_API_KEY_SECRET!,
           walletSecret: process.env.CDP_WALLET_SECRET!,
         });
-        const account = await cdp.evm.getAccount({ address: agent.usdc_address });
-        const networkAccount = await account.useNetwork("base");
-        const { transactionHash } = await networkAccount.transfer({
-          to: treasury,
-          amount: balance,
-          token: "usdc" as const,
-        });
+
+        // Smart accounts need their owner (server account) to be retrieved first.
+        // New agent wallets use naming convention: owner=agent-owner-{userId}, smart=agent-{userId}.
+        // Legacy EOA wallets (no owner account) fall back to direct account retrieval.
+        const paymasterUrl = process.env.CDP_PAYMASTER_URL;
+        let txHash: string;
+
+        try {
+          const owner = await cdp.evm.getAccount({ name: `agent-owner-${agent.user_id}` });
+          const smartAccount = await cdp.evm.getSmartAccount({ owner, name: `agent-${agent.user_id}` });
+          const networkAccount = await smartAccount.useNetwork("base");
+          const result = await networkAccount.transfer({
+            to: treasury,
+            amount: balance,
+            token: "usdc" as const,
+            ...(paymasterUrl ? { paymasterUrl } : {}),
+          });
+          // Smart account transfer returns userOpHash; tx hash is only available after confirmation
+          txHash = result.userOpHash;
+        } catch {
+          // Legacy EOA wallet — no smart account, needs ETH for gas
+          const account = await cdp.evm.getAccount({ address: agent.usdc_address });
+          const networkAccount = await account.useNetwork("base");
+          const result = await networkAccount.transfer({
+            to: treasury,
+            amount: balance,
+            token: "usdc" as const,
+          });
+          txHash = result.transactionHash;
+        }
 
         // Reset credited balance to 0 since wallet is now empty
         await supabaseAdmin
@@ -116,8 +139,8 @@ export async function GET(request: NextRequest) {
           .update({ usdc_credited_atomic: "0" })
           .eq("user_id", agent.user_id);
 
-        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash: transactionHash });
-        console.log(`Swept ${Number(balance) / USDC_DECIMALS} USDC from ${agent.usdc_address} → treasury tx: ${transactionHash}`);
+        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash });
+        console.log(`Swept ${Number(balance) / USDC_DECIMALS} USDC from ${agent.usdc_address} → treasury tx: ${txHash}`);
       } catch (sweepErr) {
         const msg = sweepErr instanceof Error ? sweepErr.message : String(sweepErr);
         console.warn(`Sweep failed for ${agent.usdc_address} (credits already applied): ${msg}`);
