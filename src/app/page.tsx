@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Bot, Zap, CreditCard, Activity } from "lucide-react";
 import { CodeExample } from "@/components/CodeExample";
 import { PricingTable } from "@/components/PricingTable";
+import { CopyButton } from "@/components/CopyButton";
 
 export default function Home() {
   return (
@@ -172,9 +173,12 @@ export default function Home() {
                 </p>
               </div>
               <div className="shrink-0">
-                <code className="block rounded-lg border bg-zinc-950 px-4 py-2 text-sm text-green-400 whitespace-nowrap">
-                  npx skills add docapi
-                </code>
+                <div className="flex items-center rounded-lg border bg-zinc-950 px-4 py-2">
+                  <code className="text-sm text-green-400 whitespace-nowrap">
+                    npx skills add docapi
+                  </code>
+                  <CopyButton text="npx skills add docapi" />
+                </div>
               </div>
             </div>
             <div className="mt-3 text-xs text-muted-foreground">
