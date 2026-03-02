@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.44.1",
     "@coinbase/coinbase-sdk": "^0.25.0",
     "@hookform/resolvers": "^5.2.2",
     "@mdx-js/loader": "^3.1.1",
