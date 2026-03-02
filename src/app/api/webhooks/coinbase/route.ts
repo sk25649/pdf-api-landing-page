@@ -119,20 +119,15 @@ export async function POST(request: Request) {
   let toAddress: string | undefined;
   let amountUsdc: number | undefined;
 
-  const data = payload.data as Record<string, unknown> | undefined;
+  // CDP V2 Token Transfers webhook — flat payload, Transfer params under `parameters`
+  // { block_number, contract_address, event_name, parameters: { from, to, value }, transaction_hash, ... }
+  const parameters = payload.parameters as Record<string, unknown> | undefined;
 
-  if (data && typeof data.to === "string" && typeof data.value === "string") {
-    // CDP Onchain Webhook format: data.to + data.value
-    toAddress = data.to.toLowerCase();
-    const rawValue = parseInt(data.value, 10);
+  if (parameters && typeof parameters.to === "string" && typeof parameters.value === "string") {
+    toAddress = parameters.to.toLowerCase();
+    const rawValue = parseInt(parameters.value, 10);
     amountUsdc = rawValue / Math.pow(10, USDC_DECIMALS);
-    console.log(`[coinbase-webhook] Parsed: to=${toAddress} value=${data.value} usdc=${amountUsdc}`);
-  } else if (data && typeof data.to === "string" && typeof data.amount === "string") {
-    // Alternative field name: data.amount instead of data.value
-    toAddress = data.to.toLowerCase();
-    const rawValue = parseInt(data.amount as string, 10);
-    amountUsdc = rawValue / Math.pow(10, USDC_DECIMALS);
-    console.log(`[coinbase-webhook] Parsed (amount field): to=${toAddress} amount=${data.amount} usdc=${amountUsdc}`);
+    console.log(`[coinbase-webhook] Parsed: to=${toAddress} value=${parameters.value} usdc=${amountUsdc}`);
   } else if (typeof payload.amount_usdc === "number") {
     // Simplified format for local testing
     amountUsdc = payload.amount_usdc;
@@ -140,7 +135,7 @@ export async function POST(request: Request) {
       toAddress = (payload.walletAddress as string).toLowerCase();
     }
   } else {
-    console.error("[coinbase-webhook] Unknown payload structure. data keys:", data ? Object.keys(data) : "no data", "top-level keys:", Object.keys(payload));
+    console.error("[coinbase-webhook] Unknown payload structure. top-level keys:", Object.keys(payload), "parameters:", parameters);
   }
 
   if (!toAddress || !amountUsdc || amountUsdc <= 0) {
