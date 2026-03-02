@@ -4,12 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-
-function generateApiKey(): string {
-  const bytes = new Uint8Array(23);
-  crypto.getRandomValues(bytes);
-  return "pk_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { generateApiKey } from "@/lib/api-keys";
 
 export async function regenerateApiKey(): Promise<{ key: string } | { error: string }> {
   const supabase = await createClient();

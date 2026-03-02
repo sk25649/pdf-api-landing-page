@@ -8,10 +8,11 @@ import { kv } from "@vercel/kv";
 export async function checkRateLimit(
   ip: string,
   limit = 10,
-  windowSeconds = 3600
+  windowSeconds = 3600,
+  prefix = "tools"
 ): Promise<boolean> {
   try {
-    const key = `ratelimit:tools:${ip}`;
+    const key = `ratelimit:${prefix}:${ip}`;
     const count = await kv.incr(key);
     if (count === 1) {
       await kv.expire(key, windowSeconds);
