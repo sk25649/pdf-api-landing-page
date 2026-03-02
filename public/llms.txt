@@ -1,0 +1,60 @@
+# Doc API
+
+> Simple HTML to PDF API for developers. Generate PDFs, screenshots, and documents programmatically in seconds.
+
+## What is Doc API?
+
+Doc API is a developer-friendly REST API for generating PDFs and screenshots from HTML. It offers fair pricing, a generous free tier (100 calls/month), and no complex setup.
+
+## Core API Endpoints
+
+- `POST https://api.docapi.co/v1/pdf` — Convert HTML to PDF
+- `POST https://api.docapi.co/v1/screenshot` — Capture webpage screenshots
+
+## Authentication
+
+All API requests require an `x-api-key` header with your API key (format: `pk_...`).
+
+## Pricing
+
+- Free: 100 API calls/month
+- Starter: $19/month — 1,000 calls/month
+- Pro: $49/month — 5,000 calls/month
+- Business: $99/month — 20,000 calls/month
+
+## Free Tools (no signup required)
+
+- **Invoice Generator**: https://www.docapi.co/tools/invoice-generator — Create professional PDF invoices
+- **OG Image Generator**: https://www.docapi.co/tools/og-image-generator — Generate Open Graph images (1200x630) from any URL
+- **Resume Builder**: https://www.docapi.co/tools/resume-builder — Build and download PDF resumes
+
+## Documentation
+
+https://www.docapi.co/docs
+
+## Blog
+
+Guides, tutorials, and comparisons: https://www.docapi.co/blog
+
+Topics covered:
+- HTML to PDF conversion
+- Screenshot API usage
+- Invoice generation
+- PDF optimization
+- Comparisons with PDFShift, Puppeteer, Bannerbear, ScreenshotOne, and others
+
+## Quick Start Example
+
+```bash
+curl -X POST https://api.docapi.co/v1/pdf \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>Hello World</h1>"}' \
+  --output document.pdf
+```
+
+## Links
+
+- Homepage: https://www.docapi.co
+- Sign up: https://www.docapi.co/signup
+- Pricing: https://www.docapi.co/pricing

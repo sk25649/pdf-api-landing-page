@@ -229,6 +229,12 @@ export default async function RootLayout({
                   >
                     OG Image Generator
                   </Link>
+                  <Link
+                    href="/tools/resume-builder"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Resume Builder
+                  </Link>
                 </div>
                 <div className="flex flex-col gap-2">
                   <h4 className="text-sm font-semibold">Resources</h4>

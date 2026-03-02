@@ -6,12 +6,9 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 function generateApiKey(): string {
-  const hexChars = "0123456789abcdef";
-  let result = "pk_";
-  for (let i = 0; i < 46; i++) {
-    result += hexChars.charAt(Math.floor(Math.random() * hexChars.length));
-  }
-  return result;
+  const bytes = new Uint8Array(23);
+  crypto.getRandomValues(bytes);
+  return "pk_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function regenerateApiKey(): Promise<{ key: string } | { error: string }> {
@@ -51,6 +48,22 @@ export async function regenerateApiKey(): Promise<{ key: string } | { error: str
 
   revalidatePath("/dashboard");
   return { key: newKey };
+}
+
+export async function getCurrentPlan(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("user_plans")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+
+  return data?.plan ?? null;
 }
 
 export async function createBillingPortalSession(): Promise<

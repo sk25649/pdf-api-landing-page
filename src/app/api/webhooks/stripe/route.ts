@@ -56,12 +56,20 @@ export async function POST(request: Request) {
 
         const userId = session.metadata?.user_id;
         const planName = session.metadata?.plan_name;
-        const customerId = session.customer as string;
+        const customerId = session.customer as string | null;
 
         if (!userId || !planName) {
           console.error("Missing metadata in checkout session");
           return NextResponse.json(
             { error: "Missing metadata" },
+            { status: 400 }
+          );
+        }
+
+        if (!customerId) {
+          console.error("Missing customer ID in checkout session", session.id);
+          return NextResponse.json(
+            { error: "Missing customer ID" },
             { status: 400 }
           );
         }
@@ -100,7 +108,7 @@ export async function POST(request: Request) {
 
         const newPlan = getPlanFromPriceId(priceId);
 
-        const { error } = await supabaseAdmin
+        const { error, count } = await supabaseAdmin
           .from("user_plans")
           .update({
             plan: newPlan,
@@ -110,6 +118,8 @@ export async function POST(request: Request) {
 
         if (error) {
           console.error("Failed to update subscription:", error);
+        } else if (count === 0) {
+          console.error("No user found for stripe_customer_id:", customerId);
         } else {
           revalidatePath("/dashboard");
         }
@@ -120,7 +130,7 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
 
-        const { error } = await supabaseAdmin
+        const { error, count } = await supabaseAdmin
           .from("user_plans")
           .update({
             plan: "free",
@@ -130,6 +140,8 @@ export async function POST(request: Request) {
 
         if (error) {
           console.error("Failed to downgrade user plan:", error);
+        } else if (count === 0) {
+          console.error("No user found for stripe_customer_id:", customerId);
         } else {
           revalidatePath("/dashboard");
         }

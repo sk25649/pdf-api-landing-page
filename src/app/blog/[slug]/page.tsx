@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getAllPostSlugs, getPostBySlug, formatDate } from "@/lib/blog";
 import { MDXContent } from "@/components/blog/MDXContent";
+
+const siteUrl = "https://www.docapi.co";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -24,14 +27,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const postUrl = `${siteUrl}/blog/${slug}`;
+
   return {
     title: `${post.title} | Doc API Blog`,
     description: post.description,
+    alternates: {
+      canonical: postUrl,
+    },
     openGraph: {
       title: post.title,
       description: post.description,
       type: "article",
       publishedTime: post.date,
+      url: postUrl,
     },
   };
 }
@@ -44,8 +53,41 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    dateModified: post.date,
+    url: `${siteUrl}/blog/${slug}`,
+    author: {
+      "@type": "Organization",
+      name: "Doc API",
+      url: siteUrl,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Doc API",
+      url: siteUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}/og-image.png`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${siteUrl}/blog/${slug}`,
+    },
+  };
+
   return (
     <main className="container mx-auto px-4 py-16">
+      <Script
+        id="blog-post-json-ld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <article className="mx-auto max-w-3xl">
         <Link
           href="/blog"

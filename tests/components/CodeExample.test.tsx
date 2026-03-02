@@ -29,7 +29,7 @@ describe('CodeExample', () => {
     render(<CodeExample />)
 
     await user.click(screen.getByRole('tab', { name: /python/i }))
-    expect(screen.getByText(/import requests/i)).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel').textContent).toMatch(/import requests/i)
   })
 
   it('switches to Node.js code when tab is clicked', async () => {
@@ -37,7 +37,7 @@ describe('CodeExample', () => {
     render(<CodeExample />)
 
     await user.click(screen.getByRole('tab', { name: /node/i }))
-    expect(screen.getByText(/const response = await fetch/i)).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel').textContent).toMatch(/const response = await fetch/i)
   })
 
   it('copies code to clipboard when copy button clicked', async () => {

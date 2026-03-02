@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { incrementStat } from "@/lib/stats";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 const workExperienceSchema = z.object({
   id: z.string(),
@@ -265,6 +266,14 @@ function generateResumeHTML(data: z.infer<typeof resumeSchema>): string {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  if (!(await checkRateLimit(ip))) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await request.json();
     const data = resumeSchema.parse(body);

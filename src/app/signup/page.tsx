@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const hasTrackedFormStart = useRef(false);
   const router = useRouter();
   const supabase = createClient();
@@ -56,8 +57,8 @@ export default function SignupPage() {
     }
 
     track("signup_success");
-    toast.success("Account created successfully!");
-    router.push("/dashboard");
+    setSubmitted(true);
+    setLoading(false);
   };
 
   const handleGitHubLogin = async () => {
@@ -73,6 +74,26 @@ export default function SignupPage() {
       toast.error(error.message);
     }
   };
+
+  if (submitted) {
+    return (
+      <main className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4">
+        <div className="w-full max-w-sm space-y-4 text-center">
+          <h1 className="text-2xl font-bold">Check your email</h1>
+          <p className="text-muted-foreground">
+            We sent a confirmation link to <strong>{email}</strong>. Click the
+            link to activate your account.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Already confirmed?{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              Log in
+            </Link>
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4">
