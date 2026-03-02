@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   if (planError) {
     console.error("Failed to insert user_plans:", planError);
     await supabaseAdmin.auth.admin.deleteUser(userId);
-    return NextResponse.json({ error: "Failed to create plan" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create plan", detail: planError.message }, { status: 500 });
   }
 
   // Generate and insert API key
