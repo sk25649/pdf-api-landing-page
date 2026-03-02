@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import dynamic from "next/dynamic";
-
-const InvoiceGeneratorClient = dynamic(
-  () => import("./client").then((m) => m.InvoiceGeneratorClient),
-  { ssr: false }
-);
+import { InvoiceGeneratorClient } from "./client";
 
 const siteUrl = "https://www.docapi.co";
 const toolUrl = `${siteUrl}/tools/invoice-generator`;
