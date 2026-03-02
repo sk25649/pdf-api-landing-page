@@ -151,8 +151,8 @@ export async function POST(request: Request) {
     .single();
 
   if (planError || !plan) {
-    console.error("No user found for USDC address:", toAddress);
-    return NextResponse.json({ error: "Unknown wallet address" }, { status: 404 });
+    // Unknown address — not one of our agent wallets. Return 200 to prevent webhook deactivation.
+    return NextResponse.json({ received: true, skipped: "unknown address" }, { status: 200 });
   }
 
   const newCredits = Math.floor(amountUsdc * CREDITS_PER_USDC);

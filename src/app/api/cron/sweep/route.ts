@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   // Fetch all agent wallets
   const { data: agents, error } = await supabaseAdmin
     .from("user_plans")
-    .select("user_id, usdc_address")
+    .select("user_id, usdc_address, credits")
     .eq("plan", "agent")
     .not("usdc_address", "is", null);
 
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const results: { address: string; swept: string; txHash?: string; error?: string }[] = [];
+  const CREDITS_PER_USDC = 50;
+  const results: { address: string; swept: string; credits_added: number; txHash?: string; error?: string }[] = [];
 
   for (const agent of agents ?? []) {
     try {
@@ -56,7 +57,24 @@ export async function GET(request: NextRequest) {
       const amount = usdcBalance?.amount.amount ?? BigInt(0);
 
       if (amount < MIN_SWEEP_AMOUNT) {
-        results.push({ address: agent.usdc_address, swept: "0", });
+        results.push({ address: agent.usdc_address, swept: "0", credits_added: 0 });
+        continue;
+      }
+
+      // Credit the account before sweeping
+      const amountUsdc = Number(amount) / 1_000_000;
+      const creditsToAdd = Math.floor(amountUsdc * CREDITS_PER_USDC);
+      const { error: creditError } = await supabaseAdmin
+        .from("user_plans")
+        .update({
+          credits: agent.credits + creditsToAdd,
+          low_balance_notified_at: null,
+        })
+        .eq("user_id", agent.user_id);
+
+      if (creditError) {
+        console.error(`Failed to credit ${agent.usdc_address}:`, creditError.message);
+        results.push({ address: agent.usdc_address, swept: "0", credits_added: 0, error: creditError.message });
         continue;
       }
 
@@ -67,20 +85,23 @@ export async function GET(request: NextRequest) {
         token: USDC_TOKEN,
       });
 
-      results.push({ address: agent.usdc_address, swept: amount.toString(), txHash: transactionHash });
-      console.log(`Swept ${amount} USDC from ${agent.usdc_address} → treasury tx: ${transactionHash}`);
+      results.push({ address: agent.usdc_address, swept: amount.toString(), credits_added: creditsToAdd, txHash: transactionHash });
+      console.log(`Swept ${amountUsdc} USDC from ${agent.usdc_address} → treasury, credited ${creditsToAdd} credits. tx: ${transactionHash}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Failed to sweep ${agent.usdc_address}:`, msg);
-      results.push({ address: agent.usdc_address, swept: "0", error: msg });
+      results.push({ address: agent.usdc_address, swept: "0", credits_added: 0, error: msg });
     }
   }
 
   const totalSwept = results.reduce((sum, r) => sum + BigInt(r.swept ?? "0"), BigInt(0));
 
+  const totalCreditsAdded = results.reduce((sum, r) => sum + (r.credits_added ?? 0), 0);
+
   return NextResponse.json({
     swept_wallets: results.filter((r) => r.txHash).length,
     total_usdc_swept: (Number(totalSwept) / 1_000_000).toFixed(6),
+    total_credits_added: totalCreditsAdded,
     results,
   });
 }
