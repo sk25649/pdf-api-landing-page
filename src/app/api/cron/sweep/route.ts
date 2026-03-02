@@ -110,8 +110,11 @@ export async function GET(request: NextRequest) {
         let txHash: string;
 
         try {
+          console.log(`[sweep] Trying smart account path for ${agent.usdc_address} (user ${agent.user_id}), paymasterUrl=${paymasterUrl ?? "not set"}`);
           const owner = await cdp.evm.getAccount({ name: `agent-owner-${agent.user_id}` });
+          console.log(`[sweep] Owner account: ${owner.address}`);
           const smartAccount = await cdp.evm.getSmartAccount({ owner, name: `agent-${agent.user_id}` });
+          console.log(`[sweep] Smart account: ${smartAccount.address}`);
           const networkAccount = await smartAccount.useNetwork("base");
           const result = await networkAccount.transfer({
             to: treasury,
@@ -121,7 +124,9 @@ export async function GET(request: NextRequest) {
           });
           // Smart account transfer returns userOpHash; tx hash is only available after confirmation
           txHash = result.userOpHash;
-        } catch {
+        } catch (smartErr) {
+          const smartMsg = smartErr instanceof Error ? smartErr.message : String(smartErr);
+          console.warn(`[sweep] Smart account path failed for ${agent.usdc_address}: ${smartMsg}`);
           // Legacy EOA wallet — no smart account, needs ETH for gas
           const account = await cdp.evm.getAccount({ address: agent.usdc_address });
           const networkAccount = await account.useNetwork("base");
