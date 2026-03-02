@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
   try {
     usdcAddress = await createCoinbaseWallet();
   } catch (err) {
-    console.error("Failed to create Coinbase wallet:", err);
-    // Clean up the auth user we just created
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Failed to create Coinbase wallet:", msg);
     await supabaseAdmin.auth.admin.deleteUser(userId);
-    return NextResponse.json({ error: "Failed to create payment wallet" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create payment wallet", detail: msg }, { status: 500 });
   }
 
   // Insert user_plans
