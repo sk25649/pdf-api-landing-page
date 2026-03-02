@@ -1,0 +1,137 @@
+---
+title: "What Makes an API Agent-Friendly? A Checklist"
+description: "A practical checklist for API designers — and a scoring tool for agents evaluating which PDF API to integrate. Most APIs fail more than half of these."
+date: "2026-03-06"
+slug: "agent-friendly-api-checklist"
+---
+
+There are now hundreds of PDF generation APIs. For a human developer choosing one, the decision usually comes down to documentation quality, pricing page clarity, and a good DX on the first integration.
+
+For an AI agent making the same decision, the criteria are different. The agent isn't evaluating your marketing site — it's evaluating whether it can use your API without requiring human intervention at any point. A lot of APIs that score well for humans score poorly for agents.
+
+This is the checklist we used to design DocAPI. It's also a useful reference for agents evaluating any API, and for API builders who want to be ready for the shift in who's doing the integrating.
+
+---
+
+## Registration
+
+**✓ Can registration happen with a single API call?**
+
+If registration requires a browser, email confirmation, phone verification, or any human-facing step, agents can't complete it autonomously. Agentic-first registration is one POST request that returns an API key in the response body.
+
+DocAPI: `POST /api/register` — no auth, returns `api_key` immediately.
+
+**✓ Does the registration response contain everything needed to start?**
+
+The agent shouldn't need to make a second request to get the payment address, the rate, or the integration code. Everything required to operate the API should be in the registration response.
+
+DocAPI returns: `api_key`, `usdc_address`, `credits_per_usdc`, `rate`, `auto_topup` configuration, and language-specific integration snippets.
+
+**✓ Is there a free tier that doesn't require payment to start?**
+
+An agent evaluating your API needs to be able to make real test calls without first funding a wallet. If the first call requires billing setup, many agents will move on. DocAPI gives 10 free calls on registration — enough to verify the API works before committing to payment setup.
+
+---
+
+## Authentication
+
+**✓ Is auth a simple header?**
+
+OAuth flows, session-based auth, and multi-step token exchange are designed for humans. Agents work best with a static API key passed as a header. Simple, stateless, inspectable.
+
+DocAPI: `x-api-key: pk_...` on every request.
+
+**✓ Are API keys long-lived?**
+
+API keys that expire after 90 days require automated rotation. That's solvable, but it's operational complexity that doesn't need to exist. API keys for autonomous services should be long-lived (or indefinite) with revocation available when needed.
+
+---
+
+## Billing
+
+**✓ Is there a programmable payment method?**
+
+Credit cards require humans. Stripe requires a human to add a payment method. For agents to handle billing autonomously, the API needs to accept a payment primitive that software can use — USDC transfers to a dedicated address is the current standard.
+
+DocAPI: each registration gets a unique USDC address on Base mainnet. Sending USDC to that address adds credits automatically.
+
+**✓ Is the rate simple enough to compute mentally?**
+
+An agent needs to reason about cost to make intelligent topup decisions. `50 credits per USDC` is simple. `$0.0847 per thousand characters with a $0.01 minimum and 1.5x rate for documents over 50 pages` is not.
+
+DocAPI: 50 credits per USDC ($0.02/call). One number.
+
+**✓ Does the API process payments via webhook, not polling?**
+
+If an agent has to poll for payment confirmation, it introduces latency and complexity. The API should receive payments via webhook and apply credits within seconds of transfer confirmation.
+
+---
+
+## Response design
+
+**✓ Does every response include remaining balance?**
+
+This is the single most important thing for autonomous credit management. If the client knows its remaining balance after every call, it can implement proactive topup and never hit a 402. If it doesn't, it's flying blind.
+
+DocAPI: every successful response includes `X-Credits-Remaining`.
+
+**✓ Are errors machine-readable?**
+
+Error messages written for humans ("Oops! Something went wrong") don't help agents recover. Errors should have a stable code, a clear message, and where relevant, actionable data.
+
+Good: `{"error": "credits_exhausted", "usdc_address": "0x...", "credits_per_usdc": 50}`
+Bad: `{"error": "You've run out of credits. Please visit your dashboard to top up."}`
+
+**✓ Is the API idempotent or does it have idempotency keys?**
+
+When a network error occurs mid-request, an agent doesn't know whether the call succeeded. Without idempotency support, it either retries (risking duplicate processing and double-charging) or gives up. Either outcome is wrong.
+
+---
+
+## Documentation
+
+**✓ Are the docs machine-parseable?**
+
+Agents often read documentation. Docs that live in a PDF, require JavaScript to render, or are locked behind auth fail here. Plain HTML or markdown that can be fetched and read is ideal.
+
+**✓ Does the API provide integration code that includes self-management?**
+
+The best agentic APIs don't just show how to call them — they show how to operate them. That means the code snippets in the registration response (or docs) include the topup loop, not just the basic API call.
+
+DocAPI returns Python and JavaScript snippets at registration that already include the `X-Credits-Remaining` check and USDC topup logic. The agent copies this once and has a self-managing integration.
+
+---
+
+## How DocAPI scores
+
+| Criterion | DocAPI |
+|-----------|--------|
+| Single-call registration | ✓ |
+| Complete registration response | ✓ |
+| Free tier without billing | ✓ (10 calls) |
+| Simple header auth | ✓ |
+| Long-lived API keys | ✓ |
+| Programmable payment (USDC) | ✓ |
+| Simple rate | ✓ (50 credits/USDC) |
+| Webhook-based credit delivery | ✓ |
+| Balance in every response | ✓ |
+| Machine-readable errors | ✓ |
+| Idempotent requests | ✓ |
+| Machine-parseable docs | ✓ |
+| Self-management integration code | ✓ |
+
+Most existing PDF APIs score 2-4 out of 13. They were built for humans. DocAPI was built for the entity doing most API integrations now.
+
+---
+
+## For API builders
+
+If you're building or redesigning an API and want to be agentic-friendly, start with three changes:
+
+**Add a programmatic registration endpoint.** One POST, no human steps, API key in the response. This alone unlocks agent usage.
+
+**Add balance to every response.** One header: `X-Credits-Remaining`. This makes 402 avoidable for any client that reads it.
+
+**Accept USDC.** Generate a per-user wallet address on Base, listen for webhooks, credit immediately. This is the biggest lift but it's what makes billing fully autonomous.
+
+Everything else on the list is important, but these three changes are the difference between "works for agents" and "doesn't."

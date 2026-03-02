@@ -1,0 +1,199 @@
+---
+title: "From Registration to Production in One API Call"
+description: "The agent registers, gets a key, funds a wallet, wires up the topup loop, and ships. The whole flow takes under a minute. Here's exactly what happens."
+date: "2026-03-07"
+slug: "agent-register-to-production"
+---
+
+Here's a thing that doesn't get talked about enough: the gap between "I have an API key" and "I have a production-ready integration" is usually where agent-built services fall apart.
+
+The agent gets the key. It makes test calls. It ships the service. Three weeks later, the service has a 402 because nobody set up billing. Or the API key was hardcoded and it's blocked because of rate limits. Or the free tier ran out and the agent that set it up isn't running anymore.
+
+The registration experience is the moment to solve all of this. If the API gives the agent everything it needs to build a *self-managing* service — not just a working one — then the gap closes.
+
+This is what that looks like with DocAPI, from first request to production-ready.
+
+---
+
+## Minute 0: Register
+
+```bash
+curl -X POST https://api.docapi.co/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notify_email": "ops@yourcompany.com"
+  }'
+```
+
+The `email` field is optional — if omitted, DocAPI generates an agent-specific email (`agent-{id}@docapi.co`). The `notify_email` is for human fallback alerts. Both are optional; `{}` works fine.
+
+Response, ~200ms:
+
+```json
+{
+  "api_key": "pk_4a7f2b9c1d3e8f2a1b5c...",
+  "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396",
+  "free_calls": 10,
+  "network": "base-mainnet",
+  "credits_per_usdc": 50,
+  "rate": "$0.02 per API call",
+  "auto_topup": {
+    "header": "X-Credits-Remaining",
+    "recommended_threshold": 50,
+    "recommended_topup_usdc": 10
+  },
+  "on_exhausted": {
+    "http_status": 402,
+    "body": {
+      "error": "credits_exhausted",
+      "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396"
+    }
+  },
+  "integration": {
+    "python": "# full self-managing wrapper included",
+    "javascript": "// full self-managing wrapper included"
+  },
+  "notifications": {
+    "low_balance_email": "ops@yourcompany.com",
+    "threshold": 50,
+    "note": "One email per 24h when credits fall below threshold"
+  },
+  "docs": "https://www.docapi.co/docs"
+}
+```
+
+This response is designed to be read once by an agent and acted on immediately. Every field has a purpose:
+
+- `api_key` — goes into the service config
+- `usdc_address` — the address the service monitors and sends USDC to
+- `auto_topup.header` — tells the agent which response header to watch
+- `auto_topup.recommended_threshold` — when to trigger a topup
+- `on_exhausted` — what a 402 looks like, so the agent can handle it as a last resort
+- `integration.python / .javascript` — ready-to-use code that includes the topup loop
+
+The agent doesn't need to read the docs page. Everything is in the response.
+
+---
+
+## Minute 0–1: Make test calls with free credits
+
+10 free calls are available immediately. The agent can validate the API produces correct output before committing to payment setup:
+
+```python
+import requests
+
+resp = requests.post(
+    "https://api.docapi.co/v1/pdf",
+    headers={"x-api-key": "pk_4a7f2b9c1d3e..."},
+    json={"html": "<h1>Test invoice</h1><p>Amount due: $500</p>"},
+)
+
+print(resp.headers.get("X-Credits-Remaining"))  # → "9"
+print(len(resp.content))  # → PDF bytes
+```
+
+The `X-Credits-Remaining` header starts at 9 after the first call. The agent now knows the billing signal works.
+
+---
+
+## Minute 1–3: Set up the payment wallet
+
+The agent creates its own wallet on Base using Coinbase AgentKit and sends an initial top-up:
+
+```python
+from coinbase_agentkit import CdpAgentkitWrapper
+
+agentkit = CdpAgentkitWrapper()
+
+# Send initial 10 USDC to fund the account
+# (10 USDC = 500 credits = ~5 days at 100 calls/day)
+agentkit.run(
+    "Send 10 USDC to 0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396 on base-mainnet"
+)
+```
+
+Within seconds, DocAPI's webhook fires, verifies the transfer signature, and adds 500 credits to the account. The agent can verify:
+
+```bash
+curl https://api.docapi.co/v1/topup \
+  -H "x-api-key: pk_4a7f2b9c1d3e..."
+```
+
+```json
+{"credits": 510, "usdc_address": "0x...", "rate": "$0.02 per call (50 credits per USDC)"}
+```
+
+510 credits: 10 free + 500 from the first topup.
+
+---
+
+## Minute 3–5: Wire in the self-managing wrapper
+
+The agent takes the integration snippet from the registration response and embeds it in the service. This is the wrapper that every PDF generation call goes through:
+
+```python
+import requests
+from coinbase_agentkit import CdpAgentkitWrapper
+
+API_KEY = "pk_4a7f2b9c1d3e..."
+USDC_ADDRESS = "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396"
+THRESHOLD = 50
+TOPUP_USDC = 10
+
+agentkit = CdpAgentkitWrapper()
+_topup_pending = False
+
+def generate_pdf(html: str) -> bytes:
+    global _topup_pending
+    resp = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={"x-api-key": API_KEY},
+        json={"html": html},
+        timeout=30,
+    )
+
+    remaining = int(resp.headers.get("X-Credits-Remaining", 999))
+    if remaining < THRESHOLD and not _topup_pending:
+        _topup_pending = True
+        try:
+            agentkit.run(f"Send {TOPUP_USDC} USDC to {USDC_ADDRESS} on base-mainnet")
+        finally:
+            _topup_pending = False
+
+    resp.raise_for_status()
+    return resp.content
+```
+
+This is the complete production implementation. It:
+
+- Makes the API call
+- Checks remaining credits in every response
+- Triggers a USDC topup when below threshold
+- Prevents concurrent topup attempts
+- Raises on API errors
+
+The agent ships this. The service is now in production.
+
+---
+
+## What happens next — without human involvement
+
+**Day 1–5:** Service makes ~100 calls/day. Credits drain from 510 to ~10. Around 50 remaining, `generate_pdf` fires a USDC transfer. 500 credits added. Back to ~560.
+
+**Day 5–10:** Same pattern. The service never approaches 402.
+
+**Month 1–6:** Autopilot. The only human-visible signal is the source wallet balance declining as the service draws from it to fund topups. If the source wallet runs dry, DocAPI sends the `notify_email` alert: *"Credits at 12. Send USDC to 0x... to continue."*
+
+That email is the first time a human needs to think about this. Not on day 1. Not on setup. Not reactively at 3am when production breaks. Just a routine "time to refill the source wallet" notification, on a timeline that gives plenty of runway.
+
+---
+
+## The design principle
+
+The registration response is the most important moment in an agent's interaction with an API. That single response determines whether the agent builds a service that manages itself or one that needs babysitting.
+
+Give the agent the rate. Give it the payment address. Give it the threshold. Give it working integration code that includes the topup loop. Give it the docs URL if it needs more.
+
+Don't make it figure out billing later. Don't make it come back to read docs after the first test call. Front-load everything the agent needs to build a production-grade service, and it will. The service will run for months or years without human intervention.
+
+That's the promise of agentic-first API design. One request, everything included, production-ready in five minutes.

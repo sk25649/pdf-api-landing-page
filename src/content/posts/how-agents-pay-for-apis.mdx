@@ -1,0 +1,95 @@
+---
+title: "How AI Agents Pay for APIs (Without a Credit Card)"
+description: "Agents have crypto wallets, not credit cards. Here's why USDC on Base is the natural billing primitive for autonomous software — and how to design an API around it."
+date: "2026-03-04"
+slug: "how-agents-pay-for-apis"
+---
+
+The first question most API builders ask when designing agent-facing billing is: *how do we get agents to pay with Stripe?*
+
+Wrong question.
+
+Agents don't have credit cards. They have wallets — programmatically created, programmatically funded crypto wallets that they can send from without any human interaction. Asking an agent to pay with Stripe is like asking it to fill out a paper form. Technically possible with enough workarounds. Not how it should work.
+
+## Where agent wallets come from
+
+When an AI agent needs to make payments, it creates a wallet. Coinbase CDP (Cloud Developer Platform) makes this a single API call:
+
+```python
+from coinbase_agentkit import CdpWalletActionProvider
+
+wallet = CdpWalletActionProvider()
+address = wallet.create_wallet()
+# Returns: "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396"
+```
+
+The wallet is a smart account on Base — Coinbase's Ethereum L2. The agent controls it. It can check the balance, send USDC, and receive funds, all programmatically. No browser, no Coinbase account login, no KYC for small amounts.
+
+This is the payment primitive that makes sense for agents. Not credit cards, not invoices, not ACH. A wallet the agent creates in a single line of code and can use immediately.
+
+## Why USDC, and why Base
+
+USDC on Base is the de facto standard for agent payments right now. A few reasons:
+
+**Programmable settlement.** A USDC transfer settles in seconds. There's no "pending" state that lasts 3 days, no chargeback window, no dispute process. The moment the transfer confirms, the recipient has the funds.
+
+**Gasless transactions.** Base supports account abstraction (ERC-4337), which means smart account holders can sponsor their own gas fees through a paymaster. The practical result: agents can send USDC without needing to separately hold ETH for gas. The transaction fee comes out of the USDC balance or is covered by the API provider. DocAPI covers gas for all agent sweep transactions via Coinbase's Base paymaster.
+
+**$1 = 50 API calls.** The math has to be simple for an agent to reason about it. DocAPI uses 50 credits per USDC — that's $0.02 per PDF. An agent evaluating whether to send 10 USDC ($10) to top up can immediately compute: "that's 500 API calls, at my current rate of 100 calls/day, that's 5 days of runway." Simple arithmetic, no conversion tables.
+
+**Webhook-based credit delivery.** When USDC lands in the agent's wallet, the payment processor sends a webhook. DocAPI listens for that webhook, looks up the wallet address, and adds credits immediately. Latency from transfer to credits available is under 10 seconds in practice.
+
+## How the payment flow works in practice
+
+Here's the full flow, from agent registration to funded account:
+
+**Step 1: Register**
+
+```bash
+curl -X POST https://api.docapi.co/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Response includes a `usdc_address` — a dedicated wallet address generated specifically for this agent registration. It's on Base mainnet.
+
+**Step 2: Fund the wallet**
+
+The agent sends USDC from its own wallet to the `usdc_address` it just received. Using Coinbase AgentKit:
+
+```javascript
+const { sendUsdc } = require('@coinbase/agentkit');
+
+await sendUsdc({
+  to: '0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396',  // from registration response
+  amount: 10,  // 10 USDC = 500 credits
+  network: 'base-mainnet'
+});
+```
+
+**Step 3: Credits appear**
+
+DocAPI detects the transfer via Coinbase webhook, verifies the signature, looks up the wallet address in our database, and adds `floor(amount_usdc * 50)` credits to the account. For 10 USDC: 500 credits.
+
+**Step 4: Software runs**
+
+From this point, the software makes API calls. Each successful response includes `X-Credits-Remaining`. When that drops below the threshold (default: 50), the software fires another USDC transfer. The cycle repeats indefinitely.
+
+## What this means for API design
+
+If you're building an API that agents will use, the billing design needs to start from the wallet primitive, not the Stripe primitive.
+
+Concretely:
+
+- **Give each registration a dedicated wallet address.** Not a shared payment address — a per-user address so you can attribute incoming funds to the right account.
+- **Process incoming funds via webhook.** Polling for new transactions is fragile. Coinbase CDP sends authenticated webhooks on transfer; that's the reliable path.
+- **Make the rate explicit and simple.** Return `credits_per_usdc` in your registration response. Don't make agents compute it from your pricing page.
+- **Support small denominations.** An agent evaluating risk might send $1 USDC to test the system before sending $100. Your webhook handler needs to handle `1_000_000` (1 USDC in 6-decimal atomic units) as gracefully as `100_000_000`.
+
+## The human parallel still works
+
+None of this breaks human billing. DocAPI's Stripe subscription flow is completely separate from the agent credit system. Human users sign up through the normal pricing page, pay monthly, and get plan-based limits. Agent accounts are different entries in the same database, with `plan = "agent"` and a `credits` balance.
+
+The two billing systems coexist because they're solving different problems. Stripe is optimized for humans: great UI, saved payment methods, invoice history, chargeback handling. USDC is optimized for agents: no UI, no human steps, instant settlement, programmable.
+
+You don't have to pick one. You pick based on who's paying.

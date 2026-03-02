@@ -1,0 +1,100 @@
+---
+title: "The 402 Problem: Why Your API Should Never Return It"
+description: "A 402 means your software just stopped working at 3am. Here's why agentic services should make 402 structurally impossible — and how to build that."
+date: "2026-03-03"
+slug: "the-402-problem"
+---
+
+HTTP 402 is officially called "Payment Required." In practice it means: *your software stopped working and nobody noticed yet.*
+
+For human-operated software, 402 is recoverable. Someone gets paged, logs into the dashboard, adds a credit card, and restarts the service. Annoying, but handled within hours.
+
+For autonomous software — services built and operated by AI agents — 402 is a silent catastrophe. No one gets paged. The agent that built the service isn't running anymore. The software just stops producing PDFs, or invoices, or reports, and nobody knows why until a downstream system fails or a customer complains.
+
+The problem isn't that 402 exists. The problem is that most APIs treat it as the normal error path for exhausted credits. It shouldn't be a runtime error. It should be architecturally impossible.
+
+## How credits actually run out
+
+Credits don't run out suddenly. They run out gradually, in a predictable curve. At some point, a service has 200 credits. Then 150. Then 80. Then 23. Then 0.
+
+Every API response contains the information needed to catch this early. The remaining balance after each call is a known quantity. The only question is whether the API tells you.
+
+Most don't. They wait until the balance hits zero and return a 402. That's a deliberate design choice — the API is treating exhaustion as an error state rather than as a predictable threshold worth communicating.
+
+An agentic-first API flips this. Every successful response includes:
+
+```
+X-Credits-Remaining: 47
+```
+
+One header. That's it. Now the software knows, on every call, exactly where it stands. The 402 path can still exist as a safety net, but any well-built client will never hit it.
+
+## The proactive topup loop
+
+Here's the pattern that makes 402 structurally impossible. The agent implements this at build time — not reactively, after the first 402:
+
+```python
+import requests
+from coinbase_agentkit import send_usdc  # or your wallet library
+
+API_KEY = "pk_..."
+USDC_ADDRESS = "0x..."  # returned on registration
+THRESHOLD = 50          # also returned on registration
+TOPUP_USDC = 10
+
+def call_docapi(html: str) -> bytes:
+    resp = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={"x-api-key": API_KEY},
+        json={"html": html},
+    )
+
+    remaining = int(resp.headers.get("X-Credits-Remaining", 999))
+    if remaining < THRESHOLD:
+        # Non-blocking — doesn't slow down the current request
+        send_usdc(to=USDC_ADDRESS, amount=TOPUP_USDC)
+
+    resp.raise_for_status()
+    return resp.content
+```
+
+When remaining credits drop below 50, the service automatically sends 10 USDC to its payment address. That triggers a webhook on the API side, which adds 500 credits. By the time the balance would have hit zero, it's already been replenished.
+
+The service never blocks on the topup. It fires it off asynchronously and continues. The replenishment happens in the background. The 402 never occurs.
+
+## What the API needs to provide for this to work
+
+The software can't implement this pattern unless the API gives it the right information. This is where most APIs fall short — they provide good authentication and good error handling, but they don't give clients the operational information needed to self-manage.
+
+An agentic-first API returns three things on registration that make self-management possible:
+
+**The credit address.** The USDC address the service can send payments to. Not a Stripe checkout link. An actual on-chain address the software can programmatically send funds to.
+
+**The rate.** How many credits per USDC. DocAPI is 50 credits per USDC — that's $0.02 per PDF. The agent needs to know this to make intelligent topup decisions.
+
+**The threshold.** The recommended balance at which to trigger a topup. This isn't just documentation — it's a parameter the API is actively recommending based on how it works.
+
+When you return these three things at registration, you've given the agent everything it needs to write software that self-funds indefinitely. You've made 402 optional.
+
+## The alternative: fire-and-forget email
+
+Some APIs try to solve this with low-balance emails. "You have 20 credits remaining — click here to top up."
+
+For humans, this works. For autonomous software, it depends entirely on whether a human is watching that inbox and whether they act fast enough.
+
+Email notifications are a fallback, not a solution. DocAPI supports them — if you register with a `notify_email`, we'll send a single alert when credits fall below the threshold. But the design goal is that the software handles it before the email is ever needed. The email is for when something went wrong with the automation: the payment wallet ran dry, the network was down, something unexpected happened.
+
+The primary path is the software managing itself. The email is the safety net for the edge cases.
+
+## Designing for the happy path
+
+The way you eliminate 402 as a runtime error is by designing the happy path to never reach it. That means:
+
+- Every API response includes remaining balance
+- Registration includes the USDC address and rate in the response
+- The integration code snippet the API provides includes the topup logic
+- Webhook processing on USDC receipt is fast enough that the balance replenishes before the next batch of calls
+
+When all four of these are true, 402 becomes a theoretical error that only occurs when the software's payment wallet itself is empty — which is a different problem, and a much rarer one.
+
+The goal isn't zero errors. The goal is making the most common failure mode — running out of credits — into something the software handles without human involvement. That's the difference between software that runs and software that needs a babysitter.

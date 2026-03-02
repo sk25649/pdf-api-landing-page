@@ -1,0 +1,199 @@
+---
+title: "Building a Service That Funds Itself: A Step-by-Step Guide"
+description: "A hands-on walkthrough: register with DocAPI, implement the X-Credits-Remaining topup loop, fund a payment wallet with Coinbase AgentKit. Zero human intervention in production."
+date: "2026-03-05"
+slug: "software-that-funds-itself"
+---
+
+Here's the scenario: you're an AI agent building a service that generates PDFs. The service will run autonomously — no human watching it, no one to intervene if it runs out of API credits. You need to build it so it funds itself.
+
+This is a walkthrough of exactly how to do that with DocAPI. By the end, you have a PDF generation service that:
+
+1. Monitors its own credit balance on every API call
+2. Automatically sends USDC when credits drop below a threshold
+3. Never returns 402 to its callers
+4. Requires zero human involvement once funded
+
+Let's build it.
+
+## Step 1: Register and get your API key
+
+One request, no browser required:
+
+```bash
+curl -X POST https://api.docapi.co/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{"notify_email": "ops@yourcompany.com"}'
+```
+
+The `notify_email` is optional — it's for a fallback human alert if something goes wrong with the automation. Leave it out for fully headless operation.
+
+Response:
+
+```json
+{
+  "api_key": "pk_4a7f2b9c1d3e...",
+  "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396",
+  "free_calls": 10,
+  "credits_per_usdc": 50,
+  "network": "base-mainnet",
+  "rate": "$0.02 per API call",
+  "auto_topup": {
+    "header": "X-Credits-Remaining",
+    "recommended_threshold": 50,
+    "recommended_topup_usdc": 10
+  }
+}
+```
+
+Save `api_key` and `usdc_address`. You'll need both.
+
+## Step 2: Set up your payment wallet
+
+Your service needs a wallet it controls — one it can send USDC from when credits run low. Using Coinbase AgentKit:
+
+```python
+from coinbase_agentkit import CdpAgentkitWrapper
+
+# This creates a managed wallet on Base mainnet
+# The agent controls this wallet; it's different from the usdc_address above
+agentkit = CdpAgentkitWrapper()
+wallet_address = agentkit.wallet.default_address.address_id
+print(f"Service payment wallet: {wallet_address}")
+```
+
+Fund this wallet with enough USDC to get started — $20–50 is reasonable for most use cases. The service will manage replenishment of the DocAPI balance automatically; you're funding the *source* wallet that the service draws from.
+
+## Step 3: Implement the core PDF function
+
+This is the wrapper every PDF call in your service goes through. The topup logic lives here, not as a background daemon — it's triggered by the API response itself.
+
+```python
+import asyncio
+import requests
+from coinbase_agentkit import CdpAgentkitWrapper
+
+# Config — all from registration response
+API_KEY = "pk_4a7f2b9c1d3e..."
+USDC_ADDRESS = "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396"
+THRESHOLD = 50    # credits
+TOPUP_USDC = 10   # USDC per topup
+
+agentkit = CdpAgentkitWrapper()
+_topup_in_progress = False  # prevent concurrent topups
+
+def html_to_pdf(html: str) -> bytes:
+    global _topup_in_progress
+
+    resp = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={
+            "x-api-key": API_KEY,
+            "Content-Type": "application/json",
+        },
+        json={"html": html},
+        timeout=30,
+    )
+
+    # Check balance and trigger topup if needed
+    remaining = int(resp.headers.get("X-Credits-Remaining", 999))
+    if remaining < THRESHOLD and not _topup_in_progress:
+        _topup_in_progress = True
+        asyncio.create_task(_topup())  # non-blocking
+
+    resp.raise_for_status()
+    return resp.content
+
+
+async def _topup():
+    global _topup_in_progress
+    try:
+        agentkit.run(f"Send {TOPUP_USDC} USDC to {USDC_ADDRESS} on base-mainnet")
+    except Exception as e:
+        print(f"Topup failed: {e}")
+        # Next call will try again since _topup_in_progress resets
+    finally:
+        _topup_in_progress = False
+```
+
+The `_topup_in_progress` flag prevents the service from firing multiple topup transactions simultaneously when several calls land while the balance is low. Once the webhook fires and credits are replenished, the next call sees a healthy balance and the flag stays down.
+
+## Step 4: The same thing in JavaScript/TypeScript
+
+If you're building in Node:
+
+```typescript
+import { sendUsdc } from '@coinbase/agentkit';
+
+const API_KEY = 'pk_4a7f2b9c1d3e...';
+const USDC_ADDRESS = '0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396';
+const THRESHOLD = 50;
+const TOPUP_USDC = 10;
+
+let topupInProgress = false;
+
+async function htmlToPdf(html: string): Promise<ArrayBuffer> {
+  const res = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ html }),
+  });
+
+  const remaining = parseInt(res.headers.get('X-Credits-Remaining') ?? '999');
+  if (remaining < THRESHOLD && !topupInProgress) {
+    topupInProgress = true;
+    sendUsdc({ to: USDC_ADDRESS, amount: TOPUP_USDC, network: 'base-mainnet' })
+      .catch(console.error)
+      .finally(() => { topupInProgress = false; });
+  }
+
+  if (!res.ok) throw new Error(`DocAPI error: ${res.status}`);
+  return res.arrayBuffer();
+}
+```
+
+## Step 5: Check your balance programmatically
+
+Any time your service wants to inspect its current standing:
+
+```bash
+curl https://api.docapi.co/v1/topup \
+  -H "x-api-key: pk_4a7f2b9c1d3e..."
+```
+
+```json
+{
+  "credits": 487,
+  "usdc_address": "0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396",
+  "rate": "$0.02 per call (50 credits per USDC)",
+  "suggested_topup_usdc": 10
+}
+```
+
+Useful for startup checks, health endpoints, or logging.
+
+## What failure looks like — and how to handle it
+
+The most likely failure mode isn't code bugs — it's the payment wallet running dry. If your service's source wallet (the one that sends USDC to DocAPI) has no USDC, the `sendUsdc` call will fail silently and credits will keep draining.
+
+Two mitigations:
+
+**1. Log topup failures visibly.** The `_topup` function above catches errors and prints them. In production, route this to whatever alerting you use (Datadog, Sentry, a Slack webhook). A topup failure should be a notable event, not a silent no-op.
+
+**2. Register with a `notify_email`.** If your service's source wallet runs dry, DocAPI sends a single human alert when credits cross below the threshold. This is the safety net for when the automation itself breaks. One email per 24 hours, with the USDC address and current balance. Your ops team can refill the source wallet and the automation picks back up.
+
+The `notify_email` is there precisely because wallets can run dry. It's not a substitute for the automated topup loop — it's the fallback for when that loop fails.
+
+## Total cost model
+
+With DocAPI at $0.02/call:
+- 1 USDC → 50 PDFs
+- 10 USDC → 500 PDFs
+- 100 USDC → 5,000 PDFs
+
+For a service generating 1,000 PDFs/month, you're looking at $20/month in USDC. The recommended topup amount of 10 USDC covers about 12 days at that rate, meaning the automated topup fires roughly 2-3 times per month. Your ops overhead: zero.
+
+That's the goal. A service that runs, pays its own bills, and only asks for human attention when something is genuinely wrong.
