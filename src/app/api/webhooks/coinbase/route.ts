@@ -87,11 +87,23 @@ export async function POST(request: Request) {
   const body = await request.text();
   const headersList = await headers();
 
+  // Log all incoming headers and body for debugging
+  const allHeaders: Record<string, string> = {};
+  headersList.forEach((value, key) => { allHeaders[key] = value; });
+  console.log("[coinbase-webhook] headers:", JSON.stringify(allHeaders));
+  console.log("[coinbase-webhook] body:", body.slice(0, 2000));
+
   // Coinbase CDP Onchain Webhooks use X-Hook0-Signature
   const sigHeader = headersList.get("x-hook0-signature") ?? "";
 
-  if (!sigHeader || !(await verifySignature(body, sigHeader, request.headers))) {
-    console.error("Invalid Coinbase webhook signature");
+  if (!sigHeader) {
+    console.error("[coinbase-webhook] Missing X-Hook0-Signature header");
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  const sigValid = await verifySignature(body, sigHeader, request.headers);
+  if (!sigValid) {
+    console.error("[coinbase-webhook] Signature verification failed. Header:", sigHeader);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -102,25 +114,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Coinbase CDP Onchain Webhook payload (Smart Contract Events / Transfer)
-  //
-  // {
-  //   id: "...",
-  //   type: "onchain.activity.detected",
-  //   createdAt: "...",
-  //   data: {
-  //     subscriptionId: "...",
-  //     networkId: "base-mainnet",
-  //     transactionHash: "0x...",
-  //     contractAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  //     eventName: "Transfer",
-  //     from: "0x...",
-  //     to: "0x...",     ← our wallet address
-  //     value: "1000000" ← USDC amount (6 decimals)
-  //   }
-  // }
-  //
-  // Also supports simplified format for local testing: { walletAddress, amount_usdc }
+  console.log("[coinbase-webhook] parsed payload:", JSON.stringify(payload).slice(0, 2000));
 
   let toAddress: string | undefined;
   let amountUsdc: number | undefined;
@@ -128,20 +122,29 @@ export async function POST(request: Request) {
   const data = payload.data as Record<string, unknown> | undefined;
 
   if (data && typeof data.to === "string" && typeof data.value === "string") {
-    // CDP Onchain Webhook format
+    // CDP Onchain Webhook format: data.to + data.value
     toAddress = data.to.toLowerCase();
     const rawValue = parseInt(data.value, 10);
     amountUsdc = rawValue / Math.pow(10, USDC_DECIMALS);
+    console.log(`[coinbase-webhook] Parsed: to=${toAddress} value=${data.value} usdc=${amountUsdc}`);
+  } else if (data && typeof data.to === "string" && typeof data.amount === "string") {
+    // Alternative field name: data.amount instead of data.value
+    toAddress = data.to.toLowerCase();
+    const rawValue = parseInt(data.amount as string, 10);
+    amountUsdc = rawValue / Math.pow(10, USDC_DECIMALS);
+    console.log(`[coinbase-webhook] Parsed (amount field): to=${toAddress} amount=${data.amount} usdc=${amountUsdc}`);
   } else if (typeof payload.amount_usdc === "number") {
     // Simplified format for local testing
     amountUsdc = payload.amount_usdc;
     if (typeof payload.walletAddress === "string") {
       toAddress = (payload.walletAddress as string).toLowerCase();
     }
+  } else {
+    console.error("[coinbase-webhook] Unknown payload structure. data keys:", data ? Object.keys(data) : "no data", "top-level keys:", Object.keys(payload));
   }
 
   if (!toAddress || !amountUsdc || amountUsdc <= 0) {
-    console.error("Could not parse USDC amount or recipient address from webhook payload");
+    console.error("[coinbase-webhook] Could not parse USDC amount or recipient address from webhook payload");
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
