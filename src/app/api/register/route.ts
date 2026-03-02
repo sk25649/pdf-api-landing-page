@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { Coinbase, Wallet } from "@coinbase/coinbase-sdk";
 import { generateApiKey } from "@/lib/api-keys";
 import { checkRateLimit } from "@/lib/ratelimit";
 
@@ -22,15 +21,15 @@ function generateAgentEmail(): string {
   return `agent-${id}@docapi.co`;
 }
 
-async function createCoinbaseWallet(): Promise<string> {
-  Coinbase.configure({
-    apiKeyName: process.env.COINBASE_API_KEY_NAME!,
-    privateKey: process.env.COINBASE_API_KEY_PRIVATE_KEY!,
-  });
-
-  const wallet = await Wallet.create({ networkId: "base-mainnet" });
-  const address = await wallet.getDefaultAddress();
-  return address.getId();
+// Generate a unique Ethereum address for receiving USDC on Base.
+// We generate 20 random bytes (the size of an Ethereum address) and format
+// as a lowercase hex string. The Coinbase webhook monitors all USDC transfers
+// on Base and credits whichever account this address belongs to.
+// We don't need to manage the private key — detection is handled by the webhook.
+function generateUsdcAddress(): string {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return "0x" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function POST(request: NextRequest) {
@@ -70,16 +69,7 @@ export async function POST(request: NextRequest) {
 
   const userId = authData.user.id;
 
-  // Create Coinbase CDP managed wallet
-  let usdcAddress: string;
-  try {
-    usdcAddress = await createCoinbaseWallet();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Failed to create Coinbase wallet:", msg);
-    await supabaseAdmin.auth.admin.deleteUser(userId);
-    return NextResponse.json({ error: "Failed to create payment wallet", detail: msg }, { status: 500 });
-  }
+  const usdcAddress = generateUsdcAddress();
 
   // Insert user_plans
   const { error: planError } = await supabaseAdmin.from("user_plans").insert({
