@@ -80,14 +80,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create payment wallet", detail: msg }, { status: 500 });
   }
 
-  // Insert user_plans
-  const { error: planError } = await supabaseAdmin.from("user_plans").insert({
-    user_id: userId,
-    plan: "agent",
-    credits: 10,
-    usdc_address: usdcAddress,
-    notify_email: notifyEmail ?? null,
-  });
+  // Upsert user_plans (a trigger may have already created a row on auth user creation)
+  const { error: planError } = await supabaseAdmin.from("user_plans").upsert(
+    {
+      user_id: userId,
+      plan: "agent",
+      credits: 10,
+      usdc_address: usdcAddress,
+      notify_email: notifyEmail ?? null,
+    },
+    { onConflict: "user_id" }
+  );
 
   if (planError) {
     console.error("Failed to insert user_plans:", planError);
