@@ -134,6 +134,27 @@ Add to `~/.cursor/mcp.json`:
 - Source: https://github.com/Doc-API-LLC/docapi-mcp
 - Setup guide: https://www.docapi.co/docs#mcp-server
 
+## Node.js SDK
+
+```bash
+npm install @docapi/sdk
+```
+
+```typescript
+import { DocAPI } from "@docapi/sdk";
+
+const client = new DocAPI("pk_live_...");
+
+const pdf = await client.pdf("<h1>Hello World</h1>");
+const img = await client.screenshot({ url: "https://example.com", width: 1200, height: 630 });
+const account = await DocAPI.register(); // agent registration, no key needed
+```
+
+- npm: https://www.npmjs.com/package/@docapi/sdk
+- GitHub: https://github.com/Doc-API-LLC/docapi-node
+- Zero dependencies, ESM + CJS, full TypeScript types
+- `client.creditsRemaining` updated after every call for proactive USDC topup
+
 ## Agent Skill (43+ agents supported)
 
 DocAPI is available as an agent skill on skills.sh. Works with Claude Code, GPT, Gemini, Cursor, and 40+ other agents.
@@ -224,3 +245,5 @@ curl -X POST https://api.docapi.co/v1/pdf \
 - MCP server: https://mcp.docapi.co/mcp
 - MCP setup guide: https://www.docapi.co/docs#mcp-server
 - MCP source: https://github.com/Doc-API-LLC/docapi-mcp
+- npm SDK: https://www.npmjs.com/package/@docapi/sdk
+- SDK source: https://github.com/Doc-API-LLC/docapi-node
