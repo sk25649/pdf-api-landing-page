@@ -239,6 +239,106 @@ DOCAPI_USDC_ADDRESS=0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396  # payment addres
         </section>
       </section>
 
+      {/* Node.js SDK */}
+      <section id="nodejs-sdk" className="scroll-mt-20">
+        <h2>Node.js SDK</h2>
+        <p>
+          The official Node.js SDK wraps the REST API with full TypeScript
+          types, ESM + CJS support, and zero dependencies.
+        </p>
+
+        <CodeBlock language="bash" code={`npm install @docapi/sdk`} />
+
+        <CodeBlock
+          language="typescript"
+          code={`import { DocAPI } from "@docapi/sdk";
+
+const client = new DocAPI(process.env.DOCAPI_KEY!);
+
+// Generate a PDF
+const pdf = await client.pdf("<h1>Hello World</h1>", { format: "A4" });
+fs.writeFileSync("output.pdf", pdf);
+
+// Screenshot a URL
+const img = await client.screenshot({ url: "https://example.com", width: 1200, height: 630 });
+fs.writeFileSync("screenshot.png", img);
+
+// Screenshot from HTML (e.g. OG image)
+const og = await client.screenshot({
+  html: \`<div style="width:1200px;height:630px;background:#0f172a;
+                      display:flex;align-items:center;padding:80px">
+           <h1 style="color:white;font-size:64px">My Post Title</h1>
+         </div>\`,
+  width: 1200,
+  height: 630,
+});`}
+        />
+
+        <h3>Credits monitoring</h3>
+        <p>
+          After every <code>pdf()</code> or <code>screenshot()</code> call,{" "}
+          <code>client.creditsRemaining</code> holds the latest value from the{" "}
+          <code>X-Credits-Remaining</code> header — useful for proactive USDC
+          top-ups on agent accounts.
+        </p>
+        <CodeBlock
+          language="typescript"
+          code={`const pdf = await client.pdf(html);
+if ((client.creditsRemaining ?? 999) < 50) {
+  // trigger USDC top-up
+}`}
+        />
+
+        <h3>Agent registration</h3>
+        <CodeBlock
+          language="typescript"
+          code={`import { DocAPI } from "@docapi/sdk";
+
+// No API key needed — static method
+const account = await DocAPI.register({ notify_email: "ops@yourcompany.com" });
+console.log(account.api_key);      // "pk_..."
+console.log(account.usdc_address); // "0x..."
+console.log(account.free_calls);   // 10`}
+        />
+
+        <h3>Error handling</h3>
+        <CodeBlock
+          language="typescript"
+          code={`import { DocAPI, DocAPIError } from "@docapi/sdk";
+
+try {
+  const pdf = await client.pdf(html);
+} catch (err) {
+  if (err instanceof DocAPIError) {
+    console.error(err.status); // 401 | 402 | 429 | 500
+    console.error(err.code);   // "invalid_api_key" | "credits_exhausted" | ...
+  }
+}`}
+        />
+
+        <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4">
+          <p className="m-0 text-sm">
+            View on{" "}
+            <a
+              href="https://www.npmjs.com/package/@docapi/sdk"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              npm
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://github.com/Doc-API-LLC/docapi-node"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>{" "}
+            · Zero dependencies · ESM + CJS · Full TypeScript types
+          </p>
+        </div>
+      </section>
+
       {/* Quick Start */}
       <section id="quick-start" className="scroll-mt-20">
         <h2>Quick Start</h2>

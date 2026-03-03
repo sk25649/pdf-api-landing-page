@@ -15,6 +15,15 @@ const navigation = [
       { name: "Available tools", href: "#mcp-tools" },
     ],
   },
+  {
+    name: "Node.js SDK",
+    href: "#nodejs-sdk",
+    children: [
+      { name: "npm install", href: "#nodejs-sdk" },
+      { name: "Credits monitoring", href: "#nodejs-sdk" },
+      { name: "Error handling", href: "#nodejs-sdk" },
+    ],
+  },
   { name: "Quick Start", href: "#quick-start" },
   { name: "Authentication", href: "#authentication" },
   {
