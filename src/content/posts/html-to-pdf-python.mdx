@@ -1,0 +1,260 @@
+---
+title: "HTML to PDF in Python: The Complete Guide (2026)"
+description: "Convert HTML to PDF in Python using docapi-sdk — zero dependencies, works with Django and Flask. Includes code examples for invoices, reports, and bulk generation."
+date: "2026-03-03"
+slug: "html-to-pdf-python"
+---
+
+Generating PDFs from HTML is a common requirement in Python backends. Invoices, reports, certificates, shipping labels — anything that needs to look good on paper or in a PDF viewer usually starts as HTML and CSS.
+
+The problem is that the traditional Python options each have a catch. WeasyPrint requires native system libraries that are painful to install in containers. pdfkit and wkhtmltopdf need a browser binary bundled into your deployment. ReportLab generates PDFs programmatically with its own drawing API — powerful, but you're not starting from HTML. xhtml2pdf handles a subset of CSS and tends to break on modern layouts.
+
+This guide covers how to generate PDFs from HTML in Python using the DocAPI SDK, which wraps a headless Chromium API and removes the deployment overhead entirely.
+
+## Why a PDF API instead of a local library
+
+The core trade-off is simple: local libraries give you no external dependency but add system-level complexity; an API gives you no system-level complexity but adds an HTTP call.
+
+For most Python services running on Lambda, Cloud Run, or any serverless platform, the system-level complexity is the harder problem. WeasyPrint adds 100–200MB of native libraries to your Docker image. wkhtmltopdf adds a full browser binary. On Lambda, these constraints are genuinely painful.
+
+DocAPI's headless Chromium runs on our infrastructure. Your service makes an HTTP POST and gets PDF bytes back. No native deps. Your Docker image stays small.
+
+## Quick start
+
+Install the SDK:
+
+```bash
+pip install docapi-sdk
+```
+
+Generate a PDF in five lines:
+
+```python
+from docapi import DocAPI
+
+client = DocAPI(api_key="your-api-key")
+
+pdf_bytes = client.pdf("<h1>Hello, world</h1><p>This is a PDF.</p>")
+
+with open("output.pdf", "wb") as f:
+    f.write(pdf_bytes)
+```
+
+Get your API key at [docapi.co/signup](https://www.docapi.co/signup). The free tier gives you 100 calls per month with no credit card required.
+
+In production, read the key from an environment variable:
+
+```python
+import os
+from docapi import DocAPI
+
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+```
+
+## PDF options
+
+The `pdf()` method accepts an optional `options` dict for controlling output format:
+
+```python
+pdf_bytes = client.pdf(
+    html_content,
+    options={
+        "format": "A4",          # "A4" or "Letter" (default: A4)
+        "landscape": False,      # True for landscape orientation
+        "printBackground": True, # Include background colors and images
+        "margin": {
+            "top": "20mm",
+            "right": "15mm",
+            "bottom": "20mm",
+            "left": "15mm",
+        },
+    }
+)
+```
+
+`printBackground` is worth knowing about. By default, Chromium strips background colors and images when printing to PDF — the same behavior as the browser's print dialog. If your template uses background colors for headers, colored rows in tables, or any decorative elements, set `printBackground: True`.
+
+For reports that need to fit more content horizontally — financial tables, Gantt charts, wide data grids — pass `"landscape": True`.
+
+## Django integration
+
+### Function-based view
+
+The most common Django pattern is to render a template to an HTML string, convert it to PDF, and return it as an HTTP response:
+
+```python
+# views.py
+import os
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from docapi import DocAPI, DocAPIError
+
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+
+@login_required
+def invoice_pdf(request, invoice_id):
+    invoice = Invoice.objects.select_related("customer").get(
+        pk=invoice_id, user=request.user
+    )
+    html = render_to_string("invoices/invoice.html", {
+        "invoice": invoice,
+        "line_items": invoice.line_items.all(),
+    })
+    try:
+        pdf_bytes = client.pdf(html, options={"format": "A4", "printBackground": True})
+    except DocAPIError as e:
+        return HttpResponse(f"PDF generation failed: {e}", status=500)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="invoice-{invoice.number}.pdf"'
+    return response
+```
+
+Use `inline` in `Content-Disposition` to display the PDF in the browser, or `attachment` to force a download.
+
+### Class-based view
+
+```python
+from django.views import View
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from docapi import DocAPI
+
+class ReportPDFView(View):
+    def get(self, request, report_id):
+        report = Report.objects.get(pk=report_id)
+        html = render_to_string("reports/report.html", {"report": report})
+        client = DocAPI(api_key=settings.DOCAPI_KEY)
+        pdf_bytes = client.pdf(html, options={"format": "Letter", "landscape": True})
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="report-{report.id}.pdf"'
+        return response
+```
+
+Store the API key in `settings.py` as `DOCAPI_KEY = os.environ["DOCAPI_KEY"]` and reference it with `settings.DOCAPI_KEY`.
+
+## Flask integration
+
+```python
+# app.py
+import os
+from flask import Flask, Response, render_template, abort
+from docapi import DocAPI, DocAPIError
+
+app = Flask(__name__)
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+
+@app.route("/invoices/<int:invoice_id>/pdf")
+def invoice_pdf(invoice_id):
+    invoice = Invoice.query.get_or_404(invoice_id)
+    html = render_template("invoice.html", invoice=invoice)
+    try:
+        pdf_bytes = client.pdf(html, options={
+            "format": "A4",
+            "printBackground": True,
+            "margin": {"top": "25mm", "bottom": "25mm", "left": "20mm", "right": "20mm"},
+        })
+    except DocAPIError as e:
+        abort(500, description=str(e))
+
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=invoice-{invoice.id}.pdf"},
+    )
+```
+
+Flask's `render_template` returns a string, so you can pass it directly to `client.pdf()`.
+
+## Bulk PDF generation
+
+When you need to generate multiple PDFs — end-of-month invoices for all customers, batch certificate generation, nightly report generation — loop over your data and collect the results:
+
+```python
+import os
+from pathlib import Path
+from docapi import DocAPI, DocAPIError
+from django.template.loader import render_to_string
+
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+output_dir = Path("/tmp/invoices")
+output_dir.mkdir(exist_ok=True)
+
+invoices = Invoice.objects.filter(month="2026-03").select_related("customer")
+
+for invoice in invoices:
+    html = render_to_string("invoices/invoice.html", {"invoice": invoice})
+    try:
+        pdf_bytes = client.pdf(html, options={"format": "A4", "printBackground": True})
+        output_path = output_dir / f"invoice-{invoice.number}.pdf"
+        output_path.write_bytes(pdf_bytes)
+        print(f"Generated {output_path}")
+    except DocAPIError as e:
+        print(f"Failed for invoice {invoice.number}: {e.status} {e.code}")
+```
+
+For high-volume batch jobs, run this in a Celery task or a background worker rather than in a web request. The API handles the rendering concurrently on the server side — your bottleneck is network latency per call, not CPU.
+
+## Error handling
+
+The SDK raises `DocAPIError` when the API returns an error. It exposes two attributes: `status` (the HTTP status code) and `code` (a machine-readable error string):
+
+```python
+from docapi import DocAPI, DocAPIError
+
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+
+try:
+    pdf_bytes = client.pdf(html)
+except DocAPIError as e:
+    if e.status == 401:
+        # Invalid or missing API key
+        raise
+    elif e.status == 402:
+        # Out of credits (agent plan) or usage limit hit
+        print(f"Credit exhausted: {e.code}")
+    elif e.status == 429:
+        # Rate limited — back off and retry
+        print("Rate limited, retry later")
+    else:
+        # Unexpected error
+        print(f"PDF generation error: {e.status} {e.code}")
+```
+
+In production Django or Flask apps, catch `DocAPIError` at the view level and return an appropriate HTTP response rather than letting it bubble up as a 500.
+
+## Monitoring credits
+
+The free tier gives you 100 API calls per month. Paid plans give you more. If you are on a paid plan or the agent billing system, you can check your remaining credits after any call:
+
+```python
+pdf_bytes = client.pdf(html)
+print(f"Credits remaining: {client.credits_remaining}")
+```
+
+`credits_remaining` is updated after each successful response. You can log it, expose it as a metric, or use it to trigger an alert before you hit zero.
+
+## Free vs paid tiers
+
+| Tier | Calls/month | Price |
+|---|---|---|
+| Free | 100 | No credit card |
+| Starter | 1,000 | $19/month |
+| Pro | 5,000 | $49/month |
+| Business | 20,000 | $149/month |
+| AI agents | Pay-per-use | $0.02/call via USDC |
+
+The free tier is enough for development and low-traffic production use. For applications generating invoices on demand, the Starter plan covers most small SaaS products comfortably.
+
+## Summary
+
+The docapi-sdk makes HTML-to-PDF generation in Python a single function call. No system dependencies, no browser binaries, no font configuration. Your HTML template renders in a real Chromium instance on our servers, so anything that looks right in a browser looks right in the PDF.
+
+- Install: `pip install docapi-sdk`
+- Django: render template to string, call `client.pdf()`, return `HttpResponse`
+- Flask: `render_template()`, call `client.pdf()`, return `Response`
+- Bulk: loop over records, call `client.pdf()` per item
+- Errors: catch `DocAPIError`, check `.status` and `.code`
+
+Full SDK reference and additional examples at [docapi.co/docs#python-sdk](https://www.docapi.co/docs#python-sdk). The package on PyPI is [`docapi-sdk`](https://pypi.org/project/docapi-sdk/).

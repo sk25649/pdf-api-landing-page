@@ -1,0 +1,147 @@
+---
+title: "DocAPI vs APIFlash: Screenshot API Comparison (2026)"
+description: "Compare DocAPI and APIFlash for screenshot and PDF generation. Pricing, features, PDF support, agent-friendly billing, and which API is right for your project."
+date: "2026-03-03"
+slug: "docapi-vs-apiflash"
+---
+
+When you need to capture web pages or convert HTML to images and PDFs programmatically, you have two broad options: build your own headless browser pipeline (Puppeteer, Playwright, or similar), or use a managed API that handles the infrastructure. Both DocAPI and APIFlash are managed APIs in this space.
+
+They overlap on screenshots but diverge quickly on everything else. This comparison covers what each actually supports, where they differ on pricing and developer experience, and which one fits which use case.
+
+## Feature comparison
+
+| Feature | DocAPI | APIFlash |
+|---|---|---|
+| Screenshot from URL | Yes | Yes |
+| HTML input (no URL needed) | Yes | Yes |
+| PDF generation | Yes (native) | No |
+| Free tier | 100 calls/month | Yes (check current limit at apiflash.com) |
+| Official Python SDK | Yes (`docapi-sdk` on PyPI) | No official SDK |
+| Official Node.js SDK | Yes (`@docapi/sdk` on npm) | No official SDK |
+| MCP server (Claude/Cursor) | Yes | No |
+| AI agent registration (no dashboard) | Yes (POST /api/register) | No |
+| USDC pay-per-use billing | Yes | No |
+| Response format | PDF bytes or image bytes | Image bytes |
+| Auth method | `x-api-key` header | Query param or header |
+
+## Pricing
+
+DocAPI's free tier gives you 100 API calls per month with no credit card required. Paid plans:
+
+- Starter: $19/month for 1,000 calls
+- Pro: $49/month for 5,000 calls
+- Business: $149/month for 20,000 calls
+- AI agent billing: $0.02 per call via USDC, no human signup required
+
+APIFlash also has a free tier. For current plan pricing and limits, check their pricing page at apiflash.com directly — pricing changes frequently and listing stale numbers does no one any good.
+
+The key difference is not just the price point but the billing model. DocAPI has a pay-per-use path designed for programmatic callers: an AI agent can register via API, receive a USDC wallet address, fund it, and start generating PDFs or screenshots — without a human ever touching a dashboard. APIFlash requires human signup and credit card billing, which rules it out for autonomous agent use cases.
+
+## PDF support
+
+This is the most significant functional difference.
+
+APIFlash generates screenshots — PNG or JPEG images of rendered web pages. It does not generate PDFs. If your use case involves PDFs (invoices, reports, certificates, contracts), APIFlash is not the right tool, and you would need a second service alongside it.
+
+DocAPI generates both. The same API (`POST https://api.docapi.co/v1/pdf`) accepts HTML and returns a PDF rendered by headless Chromium. It also generates screenshots. You do not need separate services for the two output formats.
+
+For teams that need both PDFs and screenshots, using DocAPI for both simplifies the stack: one API key, one SDK, one billing relationship.
+
+## Developer experience
+
+### Python
+
+DocAPI has an official Python SDK on PyPI:
+
+```bash
+pip install docapi-sdk
+```
+
+```python
+from docapi import DocAPI
+
+client = DocAPI(api_key="your-key")
+pdf_bytes = client.pdf("<h1>Invoice</h1><p>Total: $100</p>")
+```
+
+APIFlash does not have an official SDK. You call it with `requests` directly, which is fine but means writing your own wrapper if you want consistent error handling or retry logic.
+
+### Node.js
+
+DocAPI has an official Node.js SDK on npm:
+
+```bash
+npm install @docapi/sdk
+```
+
+```typescript
+import { DocAPI } from "@docapi/sdk";
+
+const client = new DocAPI({ apiKey: process.env.DOCAPI_KEY });
+const pdf = await client.pdf("<h1>Hello</h1>");
+```
+
+Again, APIFlash has no official Node.js SDK.
+
+### MCP server
+
+DocAPI has an MCP server, which means it works as a tool inside Claude (via Claude Desktop or Claude Code) and Cursor without writing any integration code. You can give an LLM the ability to generate PDFs or screenshots as part of a workflow by pointing it at the DocAPI MCP server.
+
+APIFlash has no MCP server.
+
+## AI agent use case
+
+This is where the products diverge most sharply.
+
+Building an AI agent that generates PDFs or screenshots as part of its workflow requires the API to be programmable end-to-end. DocAPI is designed for this:
+
+```bash
+# Register a new agent — no human dashboard required
+curl -X POST https://www.docapi.co/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "agent-001@yourapp.com", "name": "pdf-agent-001"}'
+
+# Response includes:
+# - api_key for immediate use
+# - usdc_address to fund the agent's credit balance
+# - 10 free credits to start
+```
+
+The agent can check its own credit balance:
+
+```bash
+curl https://www.docapi.co/api/topup \
+  -H "x-api-key: pk_..."
+```
+
+When credits run low, the agent funds itself by sending USDC to its address on Base. Credits are added automatically. No human intervention required.
+
+APIFlash requires creating an account through their web interface, entering payment details, and managing API keys manually. That works fine for a developer building a feature, but it is incompatible with autonomous agent workflows where the software creates its own API access.
+
+## When APIFlash makes sense
+
+APIFlash is a solid product for teams that:
+
+- Only need screenshots, never PDFs
+- Are comfortable without an official SDK
+- Have human developers managing the integration
+- Do not need agent-to-agent or programmatic registration
+
+If you are capturing screenshots of URLs for OG image generation, website monitoring, or visual regression testing, and PDFs are not in scope, APIFlash is a reasonable choice. Check their current pricing for volume — their feature set is specifically optimized for screenshot-from-URL workflows.
+
+## When DocAPI makes sense
+
+- You need PDFs, or PDFs alongside screenshots, from one API
+- You want official Python or Node.js SDKs with type safety and error handling built in
+- You are building for AI agents that need programmatic registration and USDC pay-per-use billing
+- You want your PDF/screenshot tool to work as an MCP tool inside Claude or Cursor
+- You want browser-accurate rendering (Chromium) without managing a browser binary
+
+## Verdict
+
+APIFlash is a capable screenshot API. If you only need screenshots and do not mind the lack of official SDKs, it does that job well.
+
+DocAPI is the better fit when you need PDFs, when you want official SDK support for Python or Node.js, or when you are building for AI agent workflows that need programmatic billing and registration. The overlap on screenshots means that if you are starting a project that might need PDFs later, DocAPI covers both from day one.
+
+Start with the [free tier](https://www.docapi.co/signup) — 100 calls per month, no credit card. Full API reference at [docapi.co/docs](https://www.docapi.co/docs).

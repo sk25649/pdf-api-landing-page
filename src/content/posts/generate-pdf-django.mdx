@@ -1,0 +1,311 @@
+---
+title: "Generate PDFs in Django: Invoice, Report, and Certificate Examples"
+description: "A complete guide to generating PDF files in Django using the DocAPI Python SDK. Covers invoices, reports, dynamic templates, and serving PDFs in HTTP responses."
+date: "2026-03-03"
+slug: "generate-pdf-django"
+---
+
+Django doesn't ship with built-in PDF generation. Every project that needs to produce PDFs — invoices, reports, certificates, statements — has to pick a solution. The usual candidates are ReportLab, WeasyPrint, xhtml2pdf, and more recently, PDF APIs.
+
+This guide covers practical Django PDF generation with [DocAPI](https://www.docapi.co), using templates you already write for the browser. The examples are ready to drop into a real project.
+
+## Comparing Django PDF options
+
+**ReportLab** generates PDFs using a Python drawing API. It's extremely capable but you're not writing HTML — you're placing text, lines, and boxes on a canvas programmatically. Maintaining both a web template and a ReportLab layout is double the work.
+
+**WeasyPrint** converts HTML to PDF using its own rendering engine. It's the most popular library-based option and handles most basic layouts well. But it requires native system libraries (Pango, Cairo, libffi) which makes Docker images larger and Lambda deployments painful. Its CSS support diverges from browsers in ways that require template-specific workarounds.
+
+**xhtml2pdf** is the oldest option. CSS support is limited to roughly 2010-era CSS. Modern Tailwind templates will not render correctly.
+
+**DocAPI** is an HTTP API backed by headless Chromium. Your Django view renders an HTML template to a string and sends it to the API; you get PDF bytes back. No system dependencies, full browser CSS support, works everywhere Python runs.
+
+## Setup
+
+Install the SDK:
+
+```bash
+pip install docapi-sdk
+```
+
+Add your API key to your environment and reference it in `settings.py`:
+
+```python
+# settings.py
+import os
+
+DOCAPI_KEY = os.environ["DOCAPI_KEY"]
+```
+
+Get your key at [docapi.co/signup](https://www.docapi.co/signup) — the free tier is 100 PDFs per month with no credit card.
+
+## Basic view: generate a PDF from a template
+
+The pattern in Django is always the same:
+
+1. Fetch your data from the ORM
+2. Render a Django template to an HTML string using `render_to_string`
+3. Send the HTML string to DocAPI
+4. Return the PDF bytes as an `HttpResponse`
+
+```python
+# views.py
+import os
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from docapi import DocAPI, DocAPIError
+
+client = DocAPI(api_key=os.environ["DOCAPI_KEY"])
+
+def certificate_pdf(request, certificate_id):
+    cert = Certificate.objects.get(pk=certificate_id)
+    html = render_to_string("certificates/certificate.html", {"cert": cert})
+    try:
+        pdf_bytes = client.pdf(html, options={
+            "format": "Letter",
+            "landscape": True,
+            "printBackground": True,
+        })
+    except DocAPIError as e:
+        return HttpResponse(f"Error generating PDF: {e}", status=500)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="certificate-{cert.id}.pdf"'
+    return response
+```
+
+`render_to_string` works exactly like `render()` but returns a string instead of a response. Use the same template context you would use for a browser view.
+
+## Serving inline vs as a download
+
+The `Content-Disposition` header controls whether the browser displays the PDF inline or prompts a download:
+
+```python
+# Display in the browser
+response["Content-Disposition"] = f'inline; filename="invoice-{invoice.number}.pdf"'
+
+# Force download
+response["Content-Disposition"] = f'attachment; filename="invoice-{invoice.number}.pdf"'
+```
+
+Both work. Use `inline` for views where users review the document in-browser (invoices, receipts). Use `attachment` for reports or bulk exports where the intent is to save the file.
+
+## Invoice example
+
+A realistic invoice view with line items:
+
+```python
+# views.py
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, Http404
+from django.template.loader import render_to_string
+from docapi import DocAPI, DocAPIError
+from .models import Invoice
+
+client = DocAPI(api_key=settings.DOCAPI_KEY)
+
+@login_required
+def invoice_pdf(request, invoice_id):
+    try:
+        invoice = Invoice.objects.select_related("customer").prefetch_related(
+            "line_items"
+        ).get(pk=invoice_id, owner=request.user)
+    except Invoice.DoesNotExist:
+        raise Http404
+
+    html = render_to_string("invoices/invoice_pdf.html", {
+        "invoice": invoice,
+        "customer": invoice.customer,
+        "line_items": invoice.line_items.all(),
+        "subtotal": invoice.subtotal(),
+        "tax": invoice.tax_amount(),
+        "total": invoice.total(),
+    })
+
+    try:
+        pdf_bytes = client.pdf(html, options={
+            "format": "A4",
+            "printBackground": True,
+            "margin": {
+                "top": "20mm",
+                "right": "15mm",
+                "bottom": "25mm",
+                "left": "15mm",
+            },
+        })
+    except DocAPIError as e:
+        return HttpResponse("Could not generate PDF. Please try again.", status=503)
+
+    filename = f"invoice-{invoice.number}.pdf"
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
+```
+
+The corresponding template (`invoices/invoice_pdf.html`) is a standard Django HTML template. Include your CSS inline or via a `<style>` block — the API renders it through Chromium, so any CSS that works in Chrome will work here.
+
+```html
+<!-- invoices/invoice_pdf.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: system-ui, sans-serif; color: #111; margin: 0; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+    .invoice-number { font-size: 24px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    th { background: #f3f4f6; text-align: left; padding: 8px 12px; font-size: 12px; text-transform: uppercase; }
+    td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+    .totals { margin-top: 24px; text-align: right; }
+    .total-row { font-size: 18px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="invoice-number">Invoice {{ invoice.number }}</div>
+      <div>Date: {{ invoice.date }}</div>
+      <div>Due: {{ invoice.due_date }}</div>
+    </div>
+    <div>
+      <strong>{{ invoice.customer.name }}</strong><br>
+      {{ invoice.customer.address }}<br>
+      {{ invoice.customer.email }}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>${{ item.unit_price }}</td>
+        <td>${{ item.amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div>Subtotal: ${{ subtotal }}</div>
+    <div>Tax: ${{ tax }}</div>
+    <div class="total-row">Total: ${{ total }}</div>
+  </div>
+</body>
+</html>
+```
+
+## Report example: PDF from queryset data
+
+Generating a PDF report from a database query follows the same pattern. This example produces a sales summary report:
+
+```python
+# views.py
+from django.utils import timezone
+from datetime import timedelta
+
+def sales_report_pdf(request):
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+
+    orders = Order.objects.filter(
+        created_at__date__range=(start_date, end_date),
+        status="completed",
+    ).select_related("customer").order_by("-created_at")
+
+    total_revenue = sum(o.total for o in orders)
+
+    html = render_to_string("reports/sales_report.html", {
+        "orders": orders,
+        "total_revenue": total_revenue,
+        "start_date": start_date,
+        "end_date": end_date,
+        "generated_at": timezone.now(),
+    })
+
+    pdf_bytes = client.pdf(html, options={
+        "format": "A4",
+        "landscape": True,
+        "printBackground": True,
+    })
+
+    filename = f"sales-report-{start_date}-to-{end_date}.pdf"
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+```
+
+For wide tables, `landscape: True` usually gives you more horizontal space without reformatting the template.
+
+## Email attachment example
+
+A common pattern is to generate a PDF and attach it to a Django email — for example, sending an invoice PDF automatically when an order is placed:
+
+```python
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from docapi import DocAPI
+
+client = DocAPI(api_key=settings.DOCAPI_KEY)
+
+def send_invoice_email(invoice):
+    html = render_to_string("invoices/invoice_pdf.html", {"invoice": invoice})
+    pdf_bytes = client.pdf(html, options={"format": "A4", "printBackground": True})
+
+    email = EmailMessage(
+        subject=f"Invoice {invoice.number} from Acme Corp",
+        body=f"Hi {invoice.customer.name},\n\nPlease find your invoice attached.\n\nThanks,\nAcme Corp",
+        from_email="billing@acmecorp.com",
+        to=[invoice.customer.email],
+    )
+    email.attach(
+        filename=f"invoice-{invoice.number}.pdf",
+        content=pdf_bytes,
+        mimetype="application/pdf",
+    )
+    email.send()
+```
+
+Call `send_invoice_email` from your order completion signal or view. The PDF bytes from DocAPI can be passed directly to Django's `attach()` — no need to write to disk.
+
+## Async generation with Celery
+
+For high-traffic applications where PDF generation should not block a web worker, move it into a Celery task:
+
+```python
+# tasks.py
+from celery import shared_task
+from docapi import DocAPI, DocAPIError
+from django.template.loader import render_to_string
+
+@shared_task(bind=True, max_retries=3)
+def generate_and_email_invoice(self, invoice_id):
+    from .models import Invoice
+    invoice = Invoice.objects.select_related("customer").get(pk=invoice_id)
+    html = render_to_string("invoices/invoice_pdf.html", {"invoice": invoice})
+    client = DocAPI(api_key=settings.DOCAPI_KEY)
+    try:
+        pdf_bytes = client.pdf(html, options={"format": "A4", "printBackground": True})
+    except DocAPIError as exc:
+        raise self.retry(exc=exc, countdown=10)
+    send_invoice_email(invoice, pdf_bytes)
+```
+
+Trigger it from a view or signal with `generate_and_email_invoice.delay(invoice.id)`. The web request returns immediately; the PDF is generated and emailed in the background.
+
+## Summary
+
+DocAPI fits naturally into the Django template workflow. `render_to_string` produces the HTML; `client.pdf()` produces the bytes; `HttpResponse` or `EmailMessage.attach()` delivers it.
+
+Key points:
+
+- `render_to_string` works the same as your browser views — same template, same context
+- Set `printBackground: True` if your template uses background colors or images
+- Use `Content-Disposition: inline` to display in browser, `attachment` to download
+- Wrap the PDF call in a Celery task for non-blocking generation
+- Catch `DocAPIError` and handle `status` 429 (rate limit) and 402 (out of credits) explicitly
+
+Full SDK documentation at [docapi.co/docs#python-sdk](https://www.docapi.co/docs#python-sdk).
