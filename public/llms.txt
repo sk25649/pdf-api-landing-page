@@ -79,6 +79,61 @@ def generate_pdf(html: str) -> bytes:
     return resp.content
 ```
 
+## MCP Server
+
+DocAPI has a hosted MCP (Model Context Protocol) server at `https://mcp.docapi.co/mcp`.
+
+Connect Claude Desktop, Cursor, or any MCP-compatible client by adding one config block — no local install required. Auth is per-request via the `x-api-key` header.
+
+### Claude Desktop setup
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp",
+      "headers": {
+        "x-api-key": "pk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+### Cursor setup
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp",
+      "headers": {
+        "x-api-key": "pk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+### MCP Tools
+
+- `docapi_generate_pdf` — Convert HTML to PDF. Returns base64-encoded PDF.
+- `docapi_capture_screenshot` — Screenshot a URL or HTML. Returns inline image.
+- `docapi_check_credits` — Check credit balance and USDC address (agent accounts).
+- `docapi_register_agent` — Register a new agent account programmatically.
+
+### MCP Server details
+
+- Endpoint: `POST https://mcp.docapi.co/mcp`
+- Health check: `GET https://mcp.docapi.co/health`
+- Auth: `x-api-key` request header (your DocAPI key)
+- Source: https://github.com/Doc-API-LLC/docapi-mcp
+- Setup guide: https://www.docapi.co/docs#mcp-server
+
 ## Agent Skill (43+ agents supported)
 
 DocAPI is available as an agent skill on skills.sh. Works with Claude Code, GPT, Gemini, Cursor, and 40+ other agents.
@@ -166,3 +221,6 @@ curl -X POST https://api.docapi.co/v1/pdf \
 - Pricing: https://www.docapi.co/pricing
 - Documentation: https://www.docapi.co/docs
 - Agent skill: https://skills.sh/doc-api-llc/docapi-skill/docapi
+- MCP server: https://mcp.docapi.co/mcp
+- MCP setup guide: https://www.docapi.co/docs#mcp-server
+- MCP source: https://github.com/Doc-API-LLC/docapi-mcp
