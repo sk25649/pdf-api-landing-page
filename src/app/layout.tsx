@@ -41,6 +41,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Doc API" }],
   creator: "Doc API",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/favicon-32x32.png",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -98,7 +106,7 @@ export default async function RootLayout({
         url: siteUrl,
         logo: {
           "@type": "ImageObject",
-          url: `${siteUrl}/og-image.png`,
+          url: `${siteUrl}/docapi-logo-400.png`,
         },
         sameAs: [],
       },
