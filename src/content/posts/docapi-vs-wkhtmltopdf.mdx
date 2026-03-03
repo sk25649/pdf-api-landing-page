@@ -1,0 +1,173 @@
+---
+title: "DocAPI vs wkhtmltopdf: API vs Self-Hosted PDF Generation"
+description: "wkhtmltopdf is free but comes with real operational costs — outdated WebKit, Docker complexity, memory leaks, and no async support. Here's when the API makes more sense."
+date: "2026-03-09"
+slug: "docapi-vs-wkhtmltopdf"
+---
+
+wkhtmltopdf has been the default answer to "how do I generate PDFs from HTML" for over a decade. It's free, open source, and it works. A lot of production systems run on it.
+
+But "free" doesn't mean "cheap." If you've spent time wrestling with wkhtmltopdf in production — the outdated WebKit engine, the Docker image that's 200MB just for the binary, the memory leaks on long-running processes, the complete absence of async support — you know what I mean.
+
+This is a practical comparison. Not a sales pitch — just the tradeoffs laid out.
+
+## The core difference
+
+wkhtmltopdf is a command-line tool you run yourself. You install it, call it via shell or a wrapper library, manage the process, and handle failures. DocAPI is an HTTP endpoint — you send HTML, get back a PDF.
+
+That's the whole tradeoff. Everything else follows from it.
+
+## WebKit version: the elephant in the room
+
+wkhtmltopdf uses a patched version of WebKit that was frozen around 2016. This is its most significant limitation.
+
+Modern CSS that doesn't work in wkhtmltopdf:
+- CSS Grid (partial support at best)
+- CSS custom properties (variables)
+- Flexbox (partially broken in edge cases)
+- `position: sticky`
+- Most CSS filters and blend modes
+- Many `@font-face` variants
+
+If your PDFs use modern CSS — and most templates do, because frontend developers write modern CSS — you'll spend time either debugging rendering differences or rewriting templates to target a decade-old rendering engine.
+
+DocAPI runs a current Chromium build. The same HTML that renders correctly in Chrome renders correctly in DocAPI.
+
+## Installation and deployment
+
+**wkhtmltopdf:**
+
+```bash
+# Ubuntu
+apt-get install wkhtmltopdf
+
+# But the apt version is often broken. The recommended approach:
+wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+dpkg -i wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+apt-get install -f
+```
+
+In Docker, you're looking at a 150–200MB addition to your image just for the binary and its dependencies. On serverless environments (Lambda, Vercel, Cloud Run), it either doesn't work at all or requires significant workarounds.
+
+**DocAPI:**
+
+```bash
+pip install requests  # already have it
+```
+
+```python
+import requests
+response = requests.post(
+    'https://api.docapi.co/v1/pdf',
+    headers={'x-api-key': 'pk_...'},
+    json={'html': html_string}
+)
+pdf_bytes = response.content
+```
+
+No binary, no system dependencies, works on any platform including serverless.
+
+## Memory and process management
+
+wkhtmltopdf spawns a new Qt/WebKit process for every PDF. If you're generating PDFs under load, you need to manage a process pool, handle zombie processes, and deal with memory that doesn't always get released cleanly.
+
+A common production pattern looks like this:
+
+```python
+import subprocess
+import tempfile
+import os
+
+def generate_pdf(html: str) -> bytes:
+    with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as f:
+        f.write(html.encode())
+        html_path = f.name
+
+    output_path = html_path.replace('.html', '.pdf')
+    try:
+        subprocess.run(
+            ['wkhtmltopdf', '--quiet', html_path, output_path],
+            check=True,
+            timeout=30
+        )
+        with open(output_path, 'rb') as f:
+            return f.read()
+    finally:
+        os.unlink(html_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+```
+
+That's a lot of code for "convert HTML to PDF." And it still doesn't handle concurrency limits, memory pressure, or process crashes.
+
+With DocAPI, the HTTP client handles all of this. Retries, timeouts, connection pooling — standard HTTP infrastructure.
+
+## JavaScript execution
+
+wkhtmltopdf has limited, unreliable JavaScript support. Anything that requires JavaScript to render — charts, dynamic content, frameworks like React or Vue — is hit or miss.
+
+The common workaround is to pre-render the HTML server-side before passing it to wkhtmltopdf. That works, but it means you're maintaining two rendering paths.
+
+DocAPI runs a full Chromium engine with JavaScript enabled. Pass it a React component rendered to HTML string, and Chromium executes any remaining JavaScript before capturing the PDF.
+
+## Async and serverless
+
+wkhtmltopdf is synchronous and process-based. There's no native async API — you're wrapping a command-line process. In async Python or Node.js, you're using `asyncio.create_subprocess_exec` or `child_process.spawn` wrappers.
+
+On serverless, it gets worse. Lambda has a read-only filesystem (except `/tmp`), binary size limits, and no guaranteed process persistence. Getting wkhtmltopdf working on Lambda typically requires a custom layer and a wrapper like `lambda-wkhtmltopdf`.
+
+DocAPI is an HTTP request. It works anywhere that can make an outbound HTTP call.
+
+## Cost comparison
+
+wkhtmltopdf itself is free. The real costs:
+
+- **Developer time** debugging rendering differences and CSS compatibility issues
+- **Infrastructure** — if you run a dedicated PDF generation service, that's compute you're paying for 24/7
+- **Maintenance** — the project is effectively unmaintained. The last release was 2020. Security patches are unlikely.
+
+DocAPI pricing:
+- Free: 100 PDFs/month
+- $19/month: 1,000 PDFs/month ($0.019/PDF)
+- $49/month: 5,000 PDFs/month ($0.0098/PDF)
+- AI agents: $0.02/call via USDC, no monthly commitment
+
+For most applications generating under a few thousand PDFs per month, the API cost is less than the EC2/GCE instance you'd run a self-hosted solution on.
+
+## When wkhtmltopdf still makes sense
+
+Be honest: there are cases where self-hosted wins.
+
+- **Very high volume** — generating millions of PDFs per month, cost per call adds up
+- **Air-gapped environments** — no external network calls allowed
+- **Existing working implementation** — if it works and you don't need modern CSS, don't fix what isn't broken
+- **Simple documents** — basic HTML without modern CSS, where the WebKit limitations don't matter
+
+## When to use DocAPI
+
+- Modern CSS/flexbox/grid in your templates
+- Serverless or containerized environments where binary dependencies are painful
+- You need reliable JavaScript execution
+- You want PDF generation to scale without infrastructure management
+- AI agents generating PDFs autonomously (agents can register and pay via USDC without any human setup)
+
+## Migration from wkhtmltopdf
+
+If you're switching, the change is minimal. Replace your subprocess call with an HTTP request:
+
+```python
+# Before (wkhtmltopdf)
+subprocess.run(['wkhtmltopdf', '--quiet', html_path, output_path])
+
+# After (DocAPI)
+response = requests.post(
+    'https://api.docapi.co/v1/pdf',
+    headers={'x-api-key': os.environ['DOCAPI_KEY']},
+    json={'html': html_string, 'options': {'format': 'A4'}}
+)
+pdf_bytes = response.content
+```
+
+The HTML you pass in is the same. Most templates work without modification — and usually render better, since you're no longer targeting a decade-old WebKit.
+
+Start with the [free tier](https://www.docapi.co/signup) — 100 PDFs/month, no credit card.

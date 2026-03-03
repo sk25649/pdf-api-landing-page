@@ -1,32 +1,132 @@
 # Doc API
 
-> Simple HTML to PDF API for developers. Generate PDFs, screenshots, and documents programmatically in seconds.
+> HTML to PDF and screenshot API for developers and AI agents. Generate PDFs, OG images, and documents programmatically. AI agents can register autonomously, pay with USDC on Base mainnet, and run indefinitely without human involvement.
 
 ## What is Doc API?
 
-Doc API is a developer-friendly REST API for generating PDFs and screenshots from HTML. It offers fair pricing, a generous free tier (100 calls/month), and no complex setup.
+Doc API is a developer-friendly REST API for generating PDFs and screenshots from HTML. It supports two usage models:
+
+- **Human developers**: Sign up via dashboard, pay with monthly Stripe subscription, 100 free calls/month
+- **AI agents**: Register programmatically via API (no browser, no human step), pay with USDC on Base mainnet, 10 free calls on registration
 
 ## Core API Endpoints
 
 - `POST https://api.docapi.co/v1/pdf` — Convert HTML to PDF
-- `POST https://api.docapi.co/v1/screenshot` — Capture webpage screenshots
+- `POST https://api.docapi.co/v1/screenshot` — Capture screenshots from URL or HTML
+
+## AI Agent Endpoints (no dashboard required)
+
+- `POST https://www.docapi.co/api/register` — Register programmatically. Returns api_key, usdc_address, integration code. Rate limited: 5/day/IP.
+- `GET https://www.docapi.co/api/topup` — Check credit balance and USDC address. Requires x-api-key header.
+
+## Agent Registration
+
+Agents register with a single POST request and receive everything needed to operate autonomously:
+
+```bash
+curl -X POST https://www.docapi.co/api/register \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Response includes:
+- `api_key` — use as `x-api-key` header on all API calls
+- `usdc_address` — send USDC here on Base mainnet to top up credits
+- `free_calls` — 10 free calls included on registration
+- `credits_per_usdc` — 50 credits per 1 USDC ($0.02/call)
+- `auto_topup.header` — `X-Credits-Remaining` (included on every API response)
+- `auto_topup.recommended_threshold` — 50 credits
+- `integration` — Python and JavaScript code snippets with self-managing topup loop
 
 ## Authentication
 
 All API requests require an `x-api-key` header with your API key (format: `pk_...`).
 
+```
+x-api-key: pk_your_key_here
+```
+
+## Credits System (Agent Accounts)
+
+- Rate: 50 credits per 1 USDC = $0.02 per API call
+- Payment: Send USDC to your `usdc_address` on Base mainnet
+- Credits appear within seconds via webhook
+- Every API response includes `X-Credits-Remaining` header
+- When credits reach 0, API returns HTTP 402 with `{"error": "credits_exhausted", "usdc_address": "0x..."}`
+- Recommended: implement proactive topup when X-Credits-Remaining drops below 50
+
+## Self-Managing Topup Pattern (Python)
+
+```python
+import requests
+
+API_KEY = "pk_..."
+USDC_ADDRESS = "0x..."  # from registration response
+THRESHOLD = 50
+TOPUP_USDC = 10
+
+def generate_pdf(html: str) -> bytes:
+    resp = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={"x-api-key": API_KEY},
+        json={"html": html},
+    )
+    remaining = int(resp.headers.get("X-Credits-Remaining", 999))
+    if remaining < THRESHOLD:
+        # send USDC via Coinbase AgentKit or your wallet
+        pass
+    resp.raise_for_status()
+    return resp.content
+```
+
+## Agent Skill (43+ agents supported)
+
+DocAPI is available as an agent skill on skills.sh. Works with Claude Code, GPT, Gemini, Cursor, and 40+ other agents.
+
+Install:
+```bash
+npx skills add https://github.com/doc-api-llc/docapi-skill --skill docapi
+```
+
+Skill page: https://skills.sh/doc-api-llc/docapi-skill/docapi
+
 ## Pricing
 
-- Free: 100 API calls/month
+### Human Plans (monthly subscription via Stripe)
+- Free: 100 API calls/month — no credit card required
 - Starter: $19/month — 1,000 calls/month
 - Pro: $49/month — 5,000 calls/month
 - Business: $99/month — 20,000 calls/month
+
+### Agent Plan (USDC pay-per-use)
+- $0.02 per API call (50 credits per 1 USDC)
+- No monthly commitment
+- Register via POST /api/register — no signup required
+- Pay with USDC on Base mainnet
+- 10 free calls on registration
 
 ## Free Tools (no signup required)
 
 - **Invoice Generator**: https://www.docapi.co/tools/invoice-generator — Create professional PDF invoices
 - **OG Image Generator**: https://www.docapi.co/tools/og-image-generator — Generate Open Graph images (1200x630) from any URL
 - **Resume Builder**: https://www.docapi.co/tools/resume-builder — Build and download PDF resumes
+
+## PDF Options Reference
+
+- `format`: A4 (default), Letter, Legal, Tabloid
+- `margin`: { top, right, bottom, left } in inches or px
+- `printBackground`: true/false (default: true)
+- `landscape`: true/false (default: false)
+- `scale`: 0.1–2 (default: 1)
+- `pageRanges`: e.g. "1-5, 8"
+
+## Error Codes
+
+- `missing_api_key` (401) — No x-api-key header
+- `invalid_api_key` (401) — Key not found or revoked
+- `credits_exhausted` (402) — Agent account has no credits. Response includes usdc_address for topup.
+- `usage_limit_exceeded` (429) — Monthly plan limit reached
+- `generation_failed` (500) — PDF generation failed
 
 ## Documentation
 
@@ -37,13 +137,18 @@ https://www.docapi.co/docs
 Guides, tutorials, and comparisons: https://www.docapi.co/blog
 
 Topics covered:
+- Agentic-first API design
+- How AI agents pay for APIs with USDC
+- Building self-funding services with X-Credits-Remaining
+- The 402 problem and how to avoid it
+- DocAPI agent skill installation guide
 - HTML to PDF conversion
-- Screenshot API usage
+- OG image generation
 - Invoice generation
 - PDF optimization
 - Comparisons with PDFShift, Puppeteer, Bannerbear, ScreenshotOne, and others
 
-## Quick Start Example
+## Quick Start
 
 ```bash
 curl -X POST https://api.docapi.co/v1/pdf \
@@ -56,5 +161,8 @@ curl -X POST https://api.docapi.co/v1/pdf \
 ## Links
 
 - Homepage: https://www.docapi.co
-- Sign up: https://www.docapi.co/signup
+- Sign up (humans): https://www.docapi.co/signup
+- Register (agents): POST https://www.docapi.co/api/register
 - Pricing: https://www.docapi.co/pricing
+- Documentation: https://www.docapi.co/docs
+- Agent skill: https://skills.sh/doc-api-llc/docapi-skill/docapi

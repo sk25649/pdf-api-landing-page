@@ -1,0 +1,208 @@
+---
+title: "DocAPI vs WeasyPrint: Python PDF Generation Compared"
+description: "WeasyPrint is the best Python-native PDF library. But it has real limitations around CSS support, fonts, and deployment. Here's when a Python developer should reach for an API instead."
+date: "2026-03-10"
+slug: "docapi-vs-weasyprint"
+---
+
+If you're a Python developer who needs to generate PDFs, WeasyPrint is the first thing you find. It's pip-installable, it understands CSS better than wkhtmltopdf, and it doesn't require a browser binary. For many use cases, it's the right choice.
+
+But WeasyPrint has real edges. Font handling that requires system-level setup, CSS support that diverges from browsers in subtle ways, slow performance on complex documents, and a dependency chain that can be painful in containerized environments.
+
+This is a practical comparison for Python developers deciding which path to take.
+
+## What WeasyPrint actually is
+
+WeasyPrint is a Python library that implements its own HTML/CSS rendering engine. It doesn't use a browser — it interprets HTML and CSS itself, using Pango for text layout and Cairo for rendering. This is both its strength (pure Python, no browser binary) and its limitation (its CSS support is its own implementation, not a browser).
+
+DocAPI uses a headless Chromium instance. When you send HTML to DocAPI, a real browser renders it.
+
+## CSS support differences
+
+WeasyPrint's CSS support is good for a pure-Python implementation. But it's not a browser, so gaps exist:
+
+**Things WeasyPrint handles well:**
+- Print-specific CSS (`@page`, `page-break-*`, `orphans`, `widows`)
+- Basic flexbox
+- Most typography properties
+
+**Things WeasyPrint struggles with:**
+- CSS Grid (limited support, especially named grid areas)
+- `position: sticky` and `position: fixed`
+- CSS custom properties in some contexts
+- Complex flexbox layouts
+- Many CSS transform operations
+- JavaScript-rendered content (WeasyPrint doesn't execute JS)
+- SVG embedded in HTML (partial support)
+
+If your templates are written for a browser, you'll likely find rendering differences. Fixing them means writing CSS specifically for WeasyPrint's rendering engine, which means maintaining browser compatibility and WeasyPrint compatibility separately.
+
+DocAPI renders in Chromium. If it looks right in Chrome DevTools, it looks right in the PDF.
+
+## Font handling
+
+This is where WeasyPrint frustrates people most. Font loading works differently than in a browser.
+
+WeasyPrint loads fonts from the system font directory or from paths you specify. In a Docker container, you start with no fonts. Getting your custom fonts working typically means:
+
+```dockerfile
+FROM python:3.11-slim
+
+# Install font dependencies
+RUN apt-get update && apt-get install -y \
+    fontconfig \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy your custom fonts
+COPY fonts/ /usr/share/fonts/custom/
+RUN fc-cache -f -v
+```
+
+Web fonts via `@font-face` with Google Fonts URLs work *sometimes*, depending on whether WeasyPrint successfully fetches and processes them. In practice, you often end up bundling font files locally and referencing them by path.
+
+With DocAPI, you reference fonts the same way you do in a webpage — Google Fonts URLs, `@font-face` declarations, whatever. Chromium loads them just like a browser would.
+
+## Installation complexity
+
+**WeasyPrint:**
+
+```bash
+pip install weasyprint
+```
+
+On macOS, you'll almost certainly need:
+```bash
+brew install pango cairo libffi
+```
+
+On Ubuntu/Debian:
+```bash
+apt-get install python3-dev python3-pip python3-setuptools python3-wheel \
+    python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+```
+
+In Docker, this typically adds 100–200MB to your image. On AWS Lambda or similar serverless platforms, the native library dependencies make deployment significantly more complex.
+
+**DocAPI:**
+
+```bash
+pip install requests
+```
+
+```python
+import requests
+import os
+
+response = requests.post(
+    'https://api.docapi.co/v1/pdf',
+    headers={'x-api-key': os.environ['DOCAPI_KEY']},
+    json={'html': html_string}
+)
+pdf_bytes = response.content
+```
+
+No system dependencies. Works on Lambda, Cloud Functions, Vercel's Python runtime, anywhere.
+
+## Performance
+
+WeasyPrint's rendering pipeline is Python-based, which means it's slower than a native browser engine for complex documents. A simple invoice might take 0.5–1 second. A complex multi-page report with images, tables, and custom fonts can take 3–8 seconds — in the same process, blocking.
+
+For async Python services, you're looking at running WeasyPrint in a thread pool to avoid blocking the event loop:
+
+```python
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import weasyprint
+
+executor = ThreadPoolExecutor(max_workers=4)
+
+async def generate_pdf_async(html: str) -> bytes:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        executor,
+        lambda: weasyprint.HTML(string=html).write_pdf()
+    )
+```
+
+DocAPI returns in roughly 1–3 seconds for most documents, handled by Chromium on our infrastructure. Your service stays non-blocking with a standard async HTTP request.
+
+## Django and Flask integration
+
+WeasyPrint integrates well with Django and Flask via template rendering:
+
+```python
+# Django view
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+import weasyprint
+
+def invoice_pdf(request, invoice_id):
+    invoice = Invoice.objects.get(pk=invoice_id)
+    html = render_to_string('invoices/invoice.html', {'invoice': invoice})
+    pdf = weasyprint.HTML(string=html).write_pdf()
+    return HttpResponse(pdf, content_type='application/pdf')
+```
+
+With DocAPI, it's nearly identical — just replace the WeasyPrint call:
+
+```python
+import requests
+
+def invoice_pdf(request, invoice_id):
+    invoice = Invoice.objects.get(pk=invoice_id)
+    html = render_to_string('invoices/invoice.html', {'invoice': invoice})
+    response = requests.post(
+        'https://api.docapi.co/v1/pdf',
+        headers={'x-api-key': settings.DOCAPI_KEY},
+        json={'html': html, 'options': {'format': 'A4'}}
+    )
+    return HttpResponse(response.content, content_type='application/pdf')
+```
+
+The template code stays the same. You're only changing how the HTML gets converted to PDF.
+
+## Cost comparison
+
+WeasyPrint is free. But the deployment costs are real:
+
+- Extra Docker image size (100–200MB of native deps)
+- Dedicated compute if you run a separate PDF service
+- Developer time on font setup, CSS debugging, deployment troubleshooting
+
+DocAPI:
+- Free: 100 PDFs/month (no credit card)
+- $19/month: 1,000 PDFs/month
+- $49/month: 5,000 PDFs/month
+- AI agents: $0.02/call via USDC
+
+For a Django application generating a few hundred PDFs per month, the free tier or $19/month plan costs less than the compute you'd dedicate to a self-hosted WeasyPrint service.
+
+## When WeasyPrint still wins
+
+- **Print-specific CSS features** — WeasyPrint's `@page` and print CSS support is excellent. For documents that need precise page control, running headers/footers via CSS, or specific print layout features, WeasyPrint is hard to beat.
+- **Pure offline processing** — no external network calls, no API dependency
+- **Very high volume** — at tens of thousands of PDFs per month, the per-call cost adds up
+- **Existing working implementation** — if your WeasyPrint setup works and you're not hitting its limitations, leave it
+
+## When to use DocAPI
+
+- Modern CSS templates with grid, complex flexbox, or dynamic fonts
+- Serverless or Lambda deployments where native deps are a pain
+- You want browser-accurate rendering without maintaining a browser binary
+- AI agents generating PDFs — register via API, pay with USDC, no human setup required
+- You're building a new service and don't want to deal with the WeasyPrint deployment overhead
+
+## Migration checklist
+
+If you're moving from WeasyPrint to DocAPI:
+
+1. Test your existing HTML templates via DocAPI — most render better, a few may need tweaks for Chromium vs WeasyPrint differences
+2. Replace `weasyprint.HTML(string=html).write_pdf()` with the DocAPI HTTP call
+3. Remove WeasyPrint and its native deps from your `requirements.txt` and Dockerfile
+4. Set `DOCAPI_KEY` environment variable from your dashboard
+
+That's usually the entire migration. The templates stay the same.
+
+Start with the [free tier](https://www.docapi.co/signup) — 100 PDFs/month, no credit card, API key in the dashboard.
