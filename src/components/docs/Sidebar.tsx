@@ -24,6 +24,15 @@ const navigation = [
       { name: "Error handling", href: "#nodejs-sdk" },
     ],
   },
+  {
+    name: "Python SDK",
+    href: "#python-sdk",
+    children: [
+      { name: "pip install", href: "#python-sdk" },
+      { name: "Credits monitoring", href: "#python-sdk" },
+      { name: "Error handling", href: "#python-sdk" },
+    ],
+  },
   { name: "Quick Start", href: "#quick-start" },
   { name: "Authentication", href: "#authentication" },
   {

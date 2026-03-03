@@ -155,6 +155,27 @@ const account = await DocAPI.register(); // agent registration, no key needed
 - Zero dependencies, ESM + CJS, full TypeScript types
 - `client.creditsRemaining` updated after every call for proactive USDC topup
 
+## Python SDK
+
+```bash
+pip install docapi-sdk
+```
+
+```python
+from docapi import DocAPI
+
+client = DocAPI("pk_live_...")
+
+pdf = client.pdf("<h1>Hello World</h1>")
+img = client.screenshot(url="https://example.com", width=1200, height=630)
+account = DocAPI.register()  # agent registration, no key needed
+```
+
+- PyPI: https://pypi.org/project/docapi-sdk/
+- GitHub: https://github.com/Doc-API-LLC/docapi-python
+- Zero dependencies (uses built-in urllib), Python 3.8+, full type hints
+- `client.credits_remaining` updated after every call for proactive USDC topup
+
 ## Agent Skill (43+ agents supported)
 
 DocAPI is available as an agent skill on skills.sh. Works with Claude Code, GPT, Gemini, Cursor, and 40+ other agents.
@@ -246,4 +267,6 @@ curl -X POST https://api.docapi.co/v1/pdf \
 - MCP setup guide: https://www.docapi.co/docs#mcp-server
 - MCP source: https://github.com/Doc-API-LLC/docapi-mcp
 - npm SDK: https://www.npmjs.com/package/@docapi/sdk
-- SDK source: https://github.com/Doc-API-LLC/docapi-node
+- npm SDK source: https://github.com/Doc-API-LLC/docapi-node
+- Python SDK: https://pypi.org/project/docapi-sdk/
+- Python SDK source: https://github.com/Doc-API-LLC/docapi-python

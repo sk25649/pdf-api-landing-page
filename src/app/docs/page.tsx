@@ -339,6 +339,106 @@ try {
         </div>
       </section>
 
+      {/* Python SDK */}
+      <section id="python-sdk" className="scroll-mt-20">
+        <h2>Python SDK</h2>
+        <p>
+          The official Python SDK wraps the REST API with full type hints, zero
+          dependencies, and Python 3.8+ support. Uses the built-in{" "}
+          <code>urllib</code> — no <code>requests</code> required.
+        </p>
+
+        <CodeBlock language="bash" code={`pip install docapi-sdk`} />
+
+        <CodeBlock
+          language="python"
+          code={`from docapi import DocAPI
+
+client = DocAPI("pk_live_...")
+
+# Generate a PDF
+pdf = client.pdf("<h1>Hello World</h1>", format="A4")
+with open("output.pdf", "wb") as f:
+    f.write(pdf)
+
+# Screenshot a URL
+img = client.screenshot(url="https://example.com", width=1200, height=630)
+with open("screenshot.png", "wb") as f:
+    f.write(img)
+
+# Screenshot from HTML (e.g. OG image)
+og = client.screenshot(
+    html="""<div style="width:1200px;height:630px;background:#0f172a;
+                        display:flex;align-items:center;padding:80px">
+              <h1 style="color:white;font-size:64px">My Post Title</h1>
+            </div>""",
+    width=1200,
+    height=630,
+)`}
+        />
+
+        <h3>Credits monitoring</h3>
+        <p>
+          After every <code>pdf()</code> or <code>screenshot()</code> call,{" "}
+          <code>client.credits_remaining</code> holds the latest value from the{" "}
+          <code>X-Credits-Remaining</code> header.
+        </p>
+        <CodeBlock
+          language="python"
+          code={`pdf = client.pdf(html)
+if (client.credits_remaining or 999) < 50:
+    # trigger USDC top-up
+    pass`}
+        />
+
+        <h3>Agent registration</h3>
+        <CodeBlock
+          language="python"
+          code={`from docapi import DocAPI
+
+# No API key needed — static method
+account = DocAPI.register(notify_email="ops@yourcompany.com")
+print(account["api_key"])       # "pk_..."
+print(account["usdc_address"])  # "0x..."
+print(account["free_calls"])    # 10`}
+        />
+
+        <h3>Error handling</h3>
+        <CodeBlock
+          language="python"
+          code={`from docapi import DocAPI, DocAPIError
+
+try:
+    pdf = client.pdf(html)
+except DocAPIError as e:
+    print(e.status)   # 401 | 402 | 429 | 500
+    print(e.code)     # "invalid_api_key" | "credits_exhausted" | ...
+    print(e.message)`}
+        />
+
+        <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4">
+          <p className="m-0 text-sm">
+            View on{" "}
+            <a
+              href="https://pypi.org/project/docapi-sdk/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              PyPI
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://github.com/Doc-API-LLC/docapi-python"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>{" "}
+            · Zero dependencies · Python 3.8+ · Full type hints
+          </p>
+        </div>
+      </section>
+
       {/* Quick Start */}
       <section id="quick-start" className="scroll-mt-20">
         <h2>Quick Start</h2>
