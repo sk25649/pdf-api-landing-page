@@ -71,6 +71,174 @@ DOCAPI_USDC_ADDRESS=0x2B984ee1A172B0aB50eDAf59FeA11D3ddc4e4396  # payment addres
         </div>
       </section>
 
+      {/* MCP Server */}
+      <section id="mcp-server" className="scroll-mt-20">
+        <h2>MCP Server</h2>
+        <p>
+          DocAPI has a hosted{" "}
+          <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener noreferrer">
+            Model Context Protocol
+          </a>{" "}
+          server at <code>https://mcp.docapi.co</code>. Connect once and Claude
+          Desktop, Cursor, or any MCP-compatible client can generate PDFs and
+          screenshots directly — no code required.
+        </p>
+
+        <p>
+          Authentication works per-request: you pass your DocAPI key as an HTTP
+          header in the connection config. The server never stores your key.
+        </p>
+
+        <section id="mcp-claude-desktop" className="scroll-mt-20">
+          <h3>Setup: Claude Desktop</h3>
+          <p>
+            <strong>Step 1.</strong> Get a free API key from the{" "}
+            <a href="/dashboard">dashboard</a> (or{" "}
+            <a href="/signup">sign up</a> if you don&apos;t have an account).
+          </p>
+          <p>
+            <strong>Step 2.</strong> Open your Claude Desktop config file:
+          </p>
+          <ul>
+            <li>
+              <strong>macOS:</strong>{" "}
+              <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
+            </li>
+            <li>
+              <strong>Windows:</strong>{" "}
+              <code>%APPDATA%\Claude\claude_desktop_config.json</code>
+            </li>
+          </ul>
+          <p>
+            <strong>Step 3.</strong> Add the DocAPI server under{" "}
+            <code>mcpServers</code>:
+          </p>
+          <CodeBlock
+            language="json"
+            title="claude_desktop_config.json"
+            code={`{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp",
+      "headers": {
+        "x-api-key": "pk_live_your_key_here"
+      }
+    }
+  }
+}`}
+          />
+          <p>
+            <strong>Step 4.</strong> Restart Claude Desktop. You should see a
+            hammer icon (🔨) in the input area — that confirms MCP tools are
+            active.
+          </p>
+          <p>
+            <strong>Step 5.</strong> Try it: ask Claude to{" "}
+            <em>&quot;generate a PDF of a simple invoice and save it to my Downloads folder&quot;</em>{" "}
+            or{" "}
+            <em>&quot;screenshot https://docapi.co at 1200×630&quot;</em>.
+          </p>
+
+          <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4">
+            <p className="m-0 text-sm">
+              <strong>Tip:</strong> If you already have other MCP servers
+              configured, just add the <code>&quot;docapi&quot;</code> block
+              inside your existing <code>mcpServers</code> object.
+            </p>
+          </div>
+        </section>
+
+        <section id="mcp-cursor" className="scroll-mt-20">
+          <h3>Setup: Cursor</h3>
+          <p>
+            <strong>Step 1.</strong> Open Cursor → Settings (⌘,) → search for{" "}
+            <strong>MCP</strong> → click <strong>Add MCP Server</strong>.
+          </p>
+          <p>
+            <strong>Step 2.</strong> Choose <strong>HTTP</strong> as the
+            transport type, then enter:
+          </p>
+          <ul>
+            <li>
+              <strong>URL:</strong> <code>https://mcp.docapi.co/mcp</code>
+            </li>
+            <li>
+              <strong>Headers:</strong>{" "}
+              <code>{`x-api-key: pk_live_your_key_here`}</code>
+            </li>
+          </ul>
+          <p>
+            <strong>Step 3.</strong> Save and reload. The DocAPI tools will
+            appear in Cursor&apos;s agent tool list.
+          </p>
+
+          <p>Alternatively, add it directly to <code>.cursor/mcp.json</code> in your project or <code>~/.cursor/mcp.json</code> globally:</p>
+          <CodeBlock
+            language="json"
+            title="~/.cursor/mcp.json"
+            code={`{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp",
+      "headers": {
+        "x-api-key": "pk_live_your_key_here"
+      }
+    }
+  }
+}`}
+          />
+        </section>
+
+        <section id="mcp-tools" className="scroll-mt-20">
+          <h3>Available tools</h3>
+          <p>Once connected, your agent has access to four tools:</p>
+
+          <h4>docapi_generate_pdf</h4>
+          <p>
+            Convert an HTML string to a PDF. Returns base64-encoded PDF content
+            which Claude can save to a file on your machine.
+          </p>
+          <CodeBlock
+            language="json"
+            code={`{
+  "html": "<h1 style='font-family:sans-serif'>Hello World</h1>",
+  "format": "A4",
+  "landscape": false,
+  "margin_inches": 0.5,
+  "print_background": true
+}`}
+          />
+
+          <h4>docapi_capture_screenshot</h4>
+          <p>
+            Screenshot a live URL or render HTML and capture it as an image.
+            The image is returned inline — Claude can display it directly in
+            the conversation.
+          </p>
+          <CodeBlock
+            language="json"
+            code={`{ "url": "https://example.com", "width": 1200, "height": 630 }`}
+          />
+          <CodeBlock
+            language="json"
+            code={`{ "html": "<div style='background:#0f172a;color:white;padding:60px'><h1>My Post</h1></div>", "width": 1200, "height": 630 }`}
+          />
+
+          <h4>docapi_check_credits</h4>
+          <p>
+            Check your remaining API credits and USDC top-up address (agent
+            accounts only). Takes no parameters.
+          </p>
+
+          <h4>docapi_register_agent</h4>
+          <p>
+            Register a new agent account programmatically. Useful when Claude
+            is helping you build a service that needs its own DocAPI account.
+            Returns an API key and USDC address immediately.
+          </p>
+        </section>
+      </section>
+
       {/* Quick Start */}
       <section id="quick-start" className="scroll-mt-20">
         <h2>Quick Start</h2>

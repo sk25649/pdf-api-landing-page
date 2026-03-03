@@ -1,0 +1,82 @@
+---
+title: "DocAPI Now Has an MCP Server"
+description: "Connect Claude Desktop or Cursor to DocAPI in 30 seconds. Generate PDFs and screenshots directly from your AI assistant — no code, no API calls to write manually."
+date: "2026-03-02"
+slug: "docapi-mcp-server"
+---
+
+DocAPI now has a hosted MCP server at `mcp.docapi.co`.
+
+If you use Claude Desktop or Cursor, you can connect to it in about 30 seconds and start generating PDFs and screenshots directly from your conversation — without writing any code.
+
+## What MCP is
+
+MCP (Model Context Protocol) is an open standard that lets AI assistants like Claude call external tools. Instead of copy-pasting API request snippets and running them yourself, your assistant calls the tool directly and handles the response.
+
+For DocAPI, that means you can say "generate a PDF of this invoice HTML and save it to my Downloads folder" and Claude will call the DocAPI PDF endpoint, get the result, and write the file to your disk. You don't touch curl or fetch.
+
+## How to connect
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp",
+      "headers": {
+        "x-api-key": "pk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+Config file location:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Restart Claude Desktop. You'll see a hammer icon (🔨) in the input area confirming MCP tools are active.
+
+For Cursor, go to Settings → MCP → Add Server, or add the same block to `~/.cursor/mcp.json`.
+
+Your DocAPI key goes in the `x-api-key` header. Get a free one at [docapi.co/signup](https://www.docapi.co/signup) — 100 calls/month, no credit card.
+
+## What you can do with it
+
+**Generate PDFs from HTML.** You can write HTML inline in your conversation, or point Claude at an existing template. The PDF comes back as base64 and Claude can write it to any path on your machine.
+
+```
+"Generate a one-page PDF invoice for client ACME Corp, $4,500 for
+consulting services in February. Save it to ~/Desktop/invoice.pdf"
+```
+
+Claude writes the HTML, calls `docapi_generate_pdf`, and saves the file. Done.
+
+**Screenshot any URL or HTML.** The screenshot tool returns an inline image — you can see it directly in the Claude conversation.
+
+```
+"Screenshot https://docapi.co at 1200×630 so I can see how the OG image looks"
+```
+
+Useful for checking how a page looks, generating Open Graph images, or capturing a rendered HTML template before converting it to PDF.
+
+**Register a new agent account.** If Claude is helping you build a service that needs its own DocAPI account, it can call `docapi_register_agent` and get back an API key and USDC address — without you logging into anything.
+
+**Check credits.** For agent accounts (pay-per-use via USDC), `docapi_check_credits` returns the remaining balance and your USDC top-up address.
+
+## The server is hosted — nothing to run
+
+The MCP server runs at `mcp.docapi.co`. You don't install anything locally. Each request includes your API key in the header; the server proxies the call to `api.docapi.co` with your key. The server itself has no stored credentials.
+
+The source is open at [github.com/Doc-API-LLC/docapi-mcp](https://github.com/Doc-API-LLC/docapi-mcp) if you want to self-host.
+
+## For developers building with Claude
+
+If you're building something that generates documents — invoices, reports, contracts, OG images — the MCP server means Claude can test and iterate on your templates in real time. Write the HTML, see the PDF, adjust, repeat. No switching to a terminal.
+
+It also means you can hand off document generation tasks to Claude entirely. Give it a data structure, a template, and a destination path, and it handles the rest.
+
+---
+
+Full setup guide with screenshots and Cursor instructions: [docapi.co/docs#mcp-server](https://www.docapi.co/docs#mcp-server)

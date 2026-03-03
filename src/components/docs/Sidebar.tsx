@@ -6,6 +6,15 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Agent Skill", href: "#claude-code-skill" },
+  {
+    name: "MCP Server",
+    href: "#mcp-server",
+    children: [
+      { name: "Claude Desktop", href: "#mcp-claude-desktop" },
+      { name: "Cursor", href: "#mcp-cursor" },
+      { name: "Available tools", href: "#mcp-tools" },
+    ],
+  },
   { name: "Quick Start", href: "#quick-start" },
   { name: "Authentication", href: "#authentication" },
   {

@@ -161,6 +161,39 @@ export default function Home() {
             </p>
           </div>
 
+          {/* MCP Server callout */}
+          <div className="mx-auto mb-6 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  MCP Server — connect Claude Desktop and Cursor in 30 seconds
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Add one block to your config and Claude can generate PDFs and screenshots directly. No code required.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <div className="rounded-lg border bg-zinc-950 px-4 py-2">
+                  <code className="text-xs text-zinc-300 whitespace-nowrap">
+                    <span className="text-green-400">&quot;url&quot;</span>
+                    {": "}
+                    <span className="text-yellow-300">&quot;https://mcp.docapi.co/mcp&quot;</span>
+                  </code>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">
+              <a
+                href="/docs#mcp-server"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Setup guide →
+              </a>
+              <span className="mx-2">·</span>
+              Works with Claude Desktop, Cursor, and any MCP-compatible client
+            </div>
+          </div>
+
           {/* Skills.sh callout */}
           <div className="mx-auto mb-10 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
