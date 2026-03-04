@@ -4,9 +4,11 @@ import { NextRequest } from 'next/server'
 // ---------------------------------------------------------------------------
 // Hoisted mocks
 // ---------------------------------------------------------------------------
-const { mockUserPlansChain, mockFrom, mockCdpEvm, setAgents } = vi.hoisted(() => {
+const { mockUserPlansChain, mockInsert, mockFrom, mockCdpEvm, setAgents } = vi.hoisted(() => {
   // Mutable reference so tests can change what the agents query resolves to
   let agentsResult: { data: unknown[]; error: unknown } = { data: [], error: null }
+
+  const mockInsert = vi.fn().mockResolvedValue({ error: null })
 
   const makeChain = () => {
     const c: any = {
@@ -14,6 +16,7 @@ const { mockUserPlansChain, mockFrom, mockCdpEvm, setAgents } = vi.hoisted(() =>
       eq: vi.fn(),
       not: vi.fn(),
       update: vi.fn(),
+      insert: mockInsert,
     }
     c.select.mockReturnValue(c)
     c.eq.mockReturnValue(c)
@@ -50,7 +53,7 @@ const { mockUserPlansChain, mockFrom, mockCdpEvm, setAgents } = vi.hoisted(() =>
     agentsResult = { data: agents, error }
   }
 
-  return { mockUserPlansChain, mockFrom, mockCdpEvm, setAgents }
+  return { mockUserPlansChain, mockInsert, mockFrom, mockCdpEvm, setAgents }
 })
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -106,6 +109,7 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks()
   setAgents([])
+  mockInsert.mockResolvedValue({ error: null })
   mockUserPlansChain.select.mockReturnValue(mockUserPlansChain)
   mockUserPlansChain.not.mockReturnValue(mockUserPlansChain)
   mockUserPlansChain.update.mockReturnValue(mockUserPlansChain)
@@ -256,6 +260,86 @@ describe('GET /api/cron/sweep', () => {
     expect(body.results[0].error).toMatch(/sweep failed/i)
     // Credits were still added before the sweep attempt
     expect(body.results[0].credits_added).toBe(50)
+  })
+
+  it('inserts a sweep_transactions record on successful sweep', async () => {
+    setAgents([{ ...AGENT }])
+    mockRpcBalance(1_000_000) // 1 USDC
+
+    const mockTransfer = vi.fn().mockResolvedValue({ userOpHash: '0xsweptHash' })
+    mockCdpEvm.getAccount.mockResolvedValue({ address: '0xowner' })
+    mockCdpEvm.getSmartAccount.mockResolvedValue({
+      address: '0xsmart',
+      useNetwork: vi.fn().mockReturnValue({ transfer: mockTransfer }),
+      owners: [],
+    })
+
+    await GET(makeRequest())
+
+    expect(mockFrom).toHaveBeenCalledWith('sweep_transactions')
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: AGENT.user_id,
+        usdc_address: AGENT.usdc_address,
+        amount_usdc: 1,
+        tx_hash: '0xsweptHash',
+      })
+    )
+  })
+
+  it('does not insert sweep_transactions when sweep fails', async () => {
+    setAgents([{ ...AGENT }])
+    mockRpcBalance(1_000_000)
+
+    mockCdpEvm.getAccount.mockRejectedValue(new Error('CDP API down'))
+
+    await GET(makeRequest())
+
+    const insertCalls = mockInsert.mock.calls
+    expect(insertCalls.length).toBe(0)
+  })
+
+  it('falls back to legacy EOA and succeeds when smart account is not found', async () => {
+    setAgents([{ ...AGENT }])
+    mockRpcBalance(1_000_000) // 1 USDC
+
+    const mockEoaTransfer = vi.fn().mockResolvedValue({ transactionHash: '0xeoaTx' })
+    // First call (name lookup) fails — legacy wallet
+    // Second call (address lookup) succeeds — EOA found
+    mockCdpEvm.getAccount
+      .mockRejectedValueOnce(new Error('EVM account with given address not found.'))
+      .mockResolvedValueOnce({
+        address: AGENT.usdc_address,
+        useNetwork: vi.fn().mockReturnValue({ transfer: mockEoaTransfer }),
+      })
+
+    const res = await GET(makeRequest())
+    const body = await res.json()
+
+    expect(body.swept_wallets).toBe(1)
+    expect(body.results[0].txHash).toBe('0xeoaTx')
+  })
+
+  it('returns clear "needs ETH for gas" error for legacy EOA with no ETH', async () => {
+    setAgents([{ ...AGENT }])
+    mockRpcBalance(1_000_000) // 1 USDC
+
+    // Smart account name lookup fails — legacy wallet
+    mockCdpEvm.getAccount
+      .mockRejectedValueOnce(new Error('EVM account with given address not found.'))
+      .mockResolvedValueOnce({
+        address: AGENT.usdc_address,
+        useNetwork: vi.fn().mockReturnValue({
+          transfer: vi.fn().mockRejectedValue(new Error('Insufficient balance to execute the transaction.')),
+        }),
+      })
+
+    const res = await GET(makeRequest())
+    const body = await res.json()
+
+    expect(body.swept_wallets).toBe(0)
+    expect(body.results[0].error).toMatch(/Legacy EOA wallet needs ETH for gas/i)
+    expect(body.results[0].error).toContain(AGENT.usdc_address)
   })
 
   it('uses correct safeId naming for CDP account lookup', async () => {

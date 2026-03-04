@@ -130,14 +130,21 @@ export async function GET(request: NextRequest) {
           const smartMsg = smartErr instanceof Error ? smartErr.message : String(smartErr);
           debugInfo += ` | smartErr=${smartMsg}`;
           // Legacy EOA wallet — no smart account, needs ETH for gas
-          const account = await cdp.evm.getAccount({ address: agent.usdc_address });
-          const networkAccount = await account.useNetwork("base");
-          const result = await networkAccount.transfer({
-            to: treasury,
-            amount: balance,
-            token: "usdc" as const,
-          });
-          txHash = result.transactionHash;
+          try {
+            const account = await cdp.evm.getAccount({ address: agent.usdc_address });
+            const networkAccount = await account.useNetwork("base");
+            const result = await networkAccount.transfer({
+              to: treasury,
+              amount: balance,
+              token: "usdc" as const,
+            });
+            txHash = result.transactionHash;
+          } catch (eoaErr) {
+            const eoaMsg = eoaErr instanceof Error ? eoaErr.message : String(eoaErr);
+            throw new Error(
+              `Legacy EOA wallet needs ETH for gas — fund ${agent.usdc_address} with ETH on Base to enable sweeping. (EOA error: ${eoaMsg})`
+            );
+          }
         }
 
         // Reset credited balance to 0 since wallet is now empty
@@ -145,6 +152,14 @@ export async function GET(request: NextRequest) {
           .from("user_plans")
           .update({ usdc_credited_atomic: "0" })
           .eq("user_id", agent.user_id);
+
+        // Record sweep for history/tax
+        await supabaseAdmin.from("sweep_transactions").insert({
+          user_id: agent.user_id,
+          usdc_address: agent.usdc_address,
+          amount_usdc: Number(balance) / USDC_DECIMALS,
+          tx_hash: txHash,
+        });
 
         results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash, debug: debugInfo });
         console.log(`Swept ${Number(balance) / USDC_DECIMALS} USDC from ${agent.usdc_address} → treasury tx: ${txHash}`);
