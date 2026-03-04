@@ -67,7 +67,13 @@ export default function Home() {
                   >
                     {tag}
                   </span>
-                ))}</div>
+                ))}
+              </div>
+
+              <p className="mt-3 text-xs text-muted-foreground">
+                Unlike Dompdf, mPDF, and WeasyPrint — no CSS subset
+                restrictions. If it renders in Chrome, it renders in your PDF.
+              </p>
             </div>
 
             {/* Right column - Code preview */}
