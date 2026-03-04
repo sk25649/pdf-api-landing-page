@@ -1,0 +1,264 @@
+---
+title: "PHP PDF Generation: DocAPI vs mPDF vs FPDF vs Dompdf"
+description: "A practical comparison of PHP PDF generation options: mPDF, FPDF, Dompdf, and DocAPI. When to use each and how to get started."
+date: "2026-03-04"
+slug: "php-pdf-generation"
+---
+
+PHP has more PDF libraries than any other language. That's partly a function of age — PHP has been generating invoices and reports since before most current developers started coding — and partly because none of the existing options are quite good enough to stop people from writing new ones.
+
+This guide compares the four most common approaches and shows you when to use each.
+
+## The options
+
+**FPDF** is the original. Pure PHP, no dependencies, generates PDFs by drawing text and shapes on a page. It works, but you are not writing HTML — you are placing strings at coordinates. Maintaining a PDF layout separately from your web templates is tedious.
+
+**TCPDF** is FPDF extended. More features, same fundamental approach: programmatic layout, not HTML.
+
+**Dompdf** converts HTML to PDF using a pure-PHP HTML/CSS renderer. It supports HTML and a subset of CSS, which is more convenient than FPDF. But its CSS support is limited (flexbox and grid are not supported), and it can struggle with complex layouts.
+
+**mPDF** also converts HTML to PDF. It has better CSS support than Dompdf and is the most popular choice for Laravel projects. Still runs an HTML renderer in PHP, which means it diverges from real browsers in ways that require template-specific workarounds.
+
+**DocAPI** is an HTTP API backed by headless Chromium. Your PHP code sends an HTML string; the API returns PDF bytes. Any CSS that works in Chrome works in the PDF.
+
+## When to use a library vs an API
+
+Libraries are simpler to set up for small projects — add a Composer package, call a function. APIs add an HTTP request to your stack.
+
+Libraries win if:
+- You're on a shared host with no outbound HTTP
+- You're generating simple text-based PDFs with no complex layouts
+- You want zero external dependencies
+
+APIs win if:
+- Your templates use modern CSS (flexbox, grid, custom fonts, background images)
+- You need pixel-perfect output that matches what users see in the browser
+- You're deploying to serverless (Lambda, Vercel) where Chromium can't run
+- You're generating at scale and don't want to maintain a rendering engine
+
+## FPDF: basic invoice
+
+```php
+<?php
+require('fpdf/fpdf.php');
+
+$pdf = new FPDF();
+$pdf->AddPage();
+$pdf->SetFont('Arial', 'B', 16);
+$pdf->Cell(0, 10, 'Invoice #1234', 0, 1);
+$pdf->SetFont('Arial', '', 12);
+$pdf->Cell(0, 8, 'Acme Corp — acme.com', 0, 1);
+$pdf->Ln(10);
+$pdf->Cell(100, 8, 'Description', 'B');
+$pdf->Cell(40, 8, 'Amount', 'B', 1);
+$pdf->Cell(100, 8, 'Web Development', 0);
+$pdf->Cell(40, 8, '$2,500.00', 0, 1);
+$pdf->Output('I', 'invoice.pdf');
+```
+
+No HTML, no CSS — just method calls. This is fine for simple documents. It becomes unmaintainable when your invoice has a logo, custom fonts, and a complex line-item layout.
+
+## mPDF: HTML to PDF in Laravel
+
+mPDF is the most popular choice for Laravel. Install with Composer:
+
+```bash
+composer require mpdf/mpdf
+```
+
+Basic usage:
+
+```php
+<?php
+use Mpdf\Mpdf;
+
+$mpdf = new Mpdf([
+    'margin_top' => 20,
+    'margin_right' => 15,
+    'margin_bottom' => 25,
+    'margin_left' => 15,
+]);
+
+$html = view('invoices.pdf', ['invoice' => $invoice])->render();
+$mpdf->WriteHTML($html);
+$mpdf->Output('invoice.pdf', 'I'); // 'I' = inline, 'D' = download
+```
+
+In a Laravel controller:
+
+```php
+<?php
+namespace App\Http\Controllers;
+
+use App\Models\Invoice;
+use Mpdf\Mpdf;
+
+class InvoicePdfController extends Controller
+{
+    public function show(Invoice $invoice)
+    {
+        $html = view('invoices.pdf', [
+            'invoice' => $invoice,
+            'lineItems' => $invoice->lineItems,
+        ])->render();
+
+        $mpdf = new Mpdf(['format' => 'A4']);
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=invoice-{$invoice->number}.pdf",
+        ]);
+    }
+}
+```
+
+mPDF works well for simple layouts. The CSS limitations become apparent when you use modern frameworks like Tailwind in your templates.
+
+## DocAPI: full CSS support from PHP
+
+Install the SDK (or use plain cURL):
+
+```bash
+composer require docapi/sdk
+```
+
+Usage in a Laravel controller:
+
+```php
+<?php
+namespace App\Http\Controllers;
+
+use App\Models\Invoice;
+use DocAPI\DocAPI;
+
+class InvoicePdfController extends Controller
+{
+    public function show(Invoice $invoice)
+    {
+        $client = new DocAPI(apiKey: env('DOCAPI_KEY'));
+
+        $html = view('invoices.pdf', [
+            'invoice' => $invoice,
+            'lineItems' => $invoice->lineItems,
+        ])->render();
+
+        $pdf = $client->pdf($html, [
+            'format' => 'A4',
+            'printBackground' => true,
+            'margin' => [
+                'top' => '20mm',
+                'right' => '15mm',
+                'bottom' => '25mm',
+                'left' => '15mm',
+            ],
+        ]);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=invoice-{$invoice->number}.pdf",
+        ]);
+    }
+}
+```
+
+Without the SDK, use cURL:
+
+```php
+<?php
+function generatePdf(string $html, string $apiKey): string
+{
+    $ch = curl_init('https://api.docapi.co/v1/pdf');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode([
+            'html' => $html,
+            'options' => ['format' => 'A4', 'printBackground' => true],
+        ]),
+        CURLOPT_HTTPHEADER => [
+            'x-api-key: ' . $apiKey,
+            'Content-Type: application/json',
+        ],
+    ]);
+
+    $body = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($status !== 200) {
+        throw new \RuntimeException("DocAPI error: HTTP $status");
+    }
+
+    return $body;
+}
+
+// Usage
+$html = view('invoices.pdf', ['invoice' => $invoice])->render();
+$pdfBytes = generatePdf($html, getenv('DOCAPI_KEY'));
+
+header('Content-Type: application/pdf');
+header('Content-Disposition: inline; filename="invoice.pdf"');
+echo $pdfBytes;
+```
+
+## Generating a certificate with Tailwind
+
+This is where DocAPI's full CSS support makes a real difference. A certificate styled with Tailwind:
+
+```php
+<?php
+$html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white flex items-center justify-center min-h-screen">
+  <div class="border-8 border-double border-amber-600 p-16 text-center max-w-2xl mx-auto">
+    <p class="text-amber-600 text-sm uppercase tracking-widest font-semibold mb-4">Certificate of Completion</p>
+    <h1 class="text-4xl font-bold text-gray-900 mb-2">$name</h1>
+    <p class="text-gray-500 mb-8">has successfully completed</p>
+    <h2 class="text-2xl font-semibold text-gray-800 mb-8">$courseName</h2>
+    <p class="text-gray-400 text-sm">Issued $date</p>
+  </div>
+</body>
+</html>
+HTML;
+
+$pdf = $client->pdf($html, [
+    'format' => 'Letter',
+    'landscape' => true,
+    'printBackground' => true,
+]);
+```
+
+mPDF would not render Tailwind classes. FPDF would require 50 lines of method calls to approximate this layout. DocAPI renders it exactly as Chrome would.
+
+## Comparison summary
+
+| | FPDF | mPDF | Dompdf | DocAPI |
+|---|---|---|---|---|
+| Input format | Programmatic | HTML/CSS | HTML/CSS | HTML/CSS |
+| CSS support | None | Partial | Partial | Full (Chrome) |
+| Custom fonts | Manual | TTF | AFM | Any web font |
+| Flexbox/Grid | ❌ | ❌ | ❌ | ✅ |
+| Serverless | ✅ | ✅ | ✅ | ✅ |
+| External dep | None | None | None | HTTP API |
+| Rendering speed | Fast | Medium | Medium | ~1–2s |
+
+## Getting started
+
+Get an API key at [docapi.co/signup](https://www.docapi.co/signup) — 10 free PDFs, no credit card needed.
+
+```env
+DOCAPI_KEY=pk_your_key_here
+```
+
+```php
+$client = new DocAPI(apiKey: env('DOCAPI_KEY'));
+$pdf = $client->pdf('<h1>Hello</h1>');
+```
+
+Full PHP documentation at [docapi.co/docs#php](https://www.docapi.co/docs).

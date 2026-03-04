@@ -1,0 +1,295 @@
+---
+title: "Generate PDFs in Next.js with Server Actions and Route Handlers"
+description: "How to generate PDFs in Next.js 14+ using Server Actions and Route Handlers. Covers invoices, reports, and download flows with the App Router."
+date: "2026-03-04"
+slug: "generate-pdfs-nextjs-server-actions"
+---
+
+Next.js 14 introduced Server Actions — async functions that run on the server and can be called directly from Client Components. Combined with Route Handlers, they give you two clean options for PDF generation in the App Router.
+
+This guide covers both patterns, when to use each, and how to avoid common pitfalls.
+
+## Why not generate PDFs client-side?
+
+jsPDF and similar libraries run in the browser. They work for simple text-heavy documents but they're not rendering engines — you're placing text and shapes manually, not rendering HTML. Your PDF won't match what users see on screen.
+
+Server-side generation via a PDF API (headless Chromium) produces accurate output from the same HTML and CSS your app already uses.
+
+## Route Handler pattern (recommended for downloads)
+
+A Route Handler is the right choice when the user clicks a link or button and expects a PDF file to download or open in a new tab. The browser navigates to the URL directly, so the PDF streams as a native browser download.
+
+```typescript
+// app/api/invoices/[id]/pdf/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { getInvoiceById } from '@/lib/db'
+import { renderInvoiceHtml } from '@/lib/templates'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const invoice = await getInvoiceById(params.id)
+  if (!invoice) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const html = renderInvoiceHtml(invoice)
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html,
+      options: {
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20mm', right: '15mm', bottom: '25mm', left: '15mm' },
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    return NextResponse.json({ error: 'PDF generation failed' }, { status: 502 })
+  }
+
+  const pdf = await response.arrayBuffer()
+
+  return new Response(pdf, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
+    },
+  })
+}
+```
+
+Link to it from a Server or Client Component:
+
+```tsx
+// app/invoices/[id]/page.tsx
+export default async function InvoicePage({ params }: { params: { id: string } }) {
+  const invoice = await getInvoiceById(params.id)
+
+  return (
+    <div>
+      <h1>Invoice {invoice.number}</h1>
+      <a
+        href={`/api/invoices/${params.id}/pdf`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-primary"
+      >
+        Download PDF
+      </a>
+    </div>
+  )
+}
+```
+
+`target="_blank"` opens the PDF in a new tab. Remove it if you want a direct download instead.
+
+## Server Action pattern (for programmatic generation)
+
+Server Actions are useful when you need to generate a PDF as part of a form submission or multi-step flow — for example, creating an invoice and immediately emailing the PDF.
+
+```typescript
+// app/invoices/actions.ts
+'use server'
+
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { createInvoice, getInvoiceById } from '@/lib/db'
+import { renderInvoiceHtml } from '@/lib/templates'
+import { sendInvoiceEmail } from '@/lib/email'
+
+export async function createAndSendInvoice(formData: FormData) {
+  const invoice = await createInvoice({
+    customerId: formData.get('customerId') as string,
+    lineItems: JSON.parse(formData.get('lineItems') as string),
+  })
+
+  const html = renderInvoiceHtml(invoice)
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html,
+      options: { format: 'A4', printBackground: true },
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('PDF generation failed')
+  }
+
+  const pdfBuffer = Buffer.from(await response.arrayBuffer())
+
+  await sendInvoiceEmail({
+    to: invoice.customer.email,
+    invoiceNumber: invoice.number,
+    pdf: pdfBuffer,
+  })
+
+  revalidatePath('/invoices')
+  redirect(`/invoices/${invoice.id}`)
+}
+```
+
+Call it from a Client Component form:
+
+```tsx
+// app/invoices/new/page.tsx
+'use client'
+
+import { createAndSendInvoice } from '../actions'
+
+export default function NewInvoicePage() {
+  return (
+    <form action={createAndSendInvoice}>
+      {/* form fields */}
+      <button type="submit">Create & Send Invoice</button>
+    </form>
+  )
+}
+```
+
+## HTML template with inline styles
+
+The PDF API renders through Chromium, so any CSS works. For simplicity in templates that are PDF-only, inline styles avoid any issues with external stylesheets not loading:
+
+```typescript
+// lib/templates/invoice.ts
+export function renderInvoiceHtml(invoice: Invoice): string {
+  const lineItemsHtml = invoice.lineItems.map(item => `
+    <tr>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total.toFixed(2)}</td>
+    </tr>
+  `).join('')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; color: #111; margin: 0; padding: 40px; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 48px; }
+    .invoice-title { font-size: 28px; font-weight: 700; color: #111; }
+    .invoice-meta { color: #6b7280; font-size: 14px; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f9fafb; text-align: left; padding: 8px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+    .totals { margin-top: 32px; display: flex; justify-content: flex-end; }
+    .totals table { width: 280px; }
+    .total-row td { font-weight: 700; font-size: 16px; padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="invoice-title">Invoice ${invoice.number}</div>
+      <div class="invoice-meta">
+        Date: ${invoice.date}<br>
+        Due: ${invoice.dueDate}
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <strong>${invoice.customer.name}</strong><br>
+      <span style="color: #6b7280; font-size: 14px;">
+        ${invoice.customer.address}<br>
+        ${invoice.customer.email}
+      </span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th style="text-align: right;">Qty</th>
+        <th style="text-align: right;">Unit Price</th>
+        <th style="text-align: right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${lineItemsHtml}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr><td>Subtotal</td><td style="text-align:right;">$${invoice.subtotal.toFixed(2)}</td></tr>
+      <tr><td>Tax (${invoice.taxRate}%)</td><td style="text-align:right;">$${invoice.tax.toFixed(2)}</td></tr>
+      <tr class="total-row"><td>Total</td><td style="text-align:right;">$${invoice.total.toFixed(2)}</td></tr>
+    </table>
+  </div>
+</body>
+</html>`
+}
+```
+
+## Using Tailwind in PDF templates
+
+The PDF API renders via Chromium, which means Tailwind CDN works:
+
+```typescript
+export function renderCertificateHtml(name: string, course: string, date: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white flex items-center justify-center min-h-screen p-0 m-0">
+  <div class="w-full h-full flex items-center justify-center">
+    <div class="border-8 border-double border-amber-500 p-20 text-center max-w-3xl">
+      <p class="text-amber-600 uppercase tracking-widest text-sm font-semibold mb-6">Certificate of Completion</p>
+      <h1 class="text-5xl font-bold text-gray-900 mb-4">${name}</h1>
+      <p class="text-gray-500 text-lg mb-6">has successfully completed</p>
+      <h2 class="text-3xl font-semibold text-gray-800 mb-8">${course}</h2>
+      <p class="text-gray-400">${date}</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+```
+
+Pass `landscape: true` and `format: 'Letter'` in the options for certificate-sized output.
+
+## Common pitfalls
+
+**Don't return PDF bytes from Server Actions.** Server Actions return serializable data — you can't return a `Buffer` directly. Use a Route Handler for any endpoint that streams bytes to the browser.
+
+**Add `no-store` cache control for dynamic PDFs.** If Next.js caches your Route Handler, all users get the same PDF:
+
+```typescript
+export const dynamic = 'force-dynamic'
+// or in the response:
+return new Response(pdf, {
+  headers: {
+    'Content-Type': 'application/pdf',
+    'Cache-Control': 'no-store',
+  },
+})
+```
+
+**Use `process.env.DOCAPI_KEY` server-side only.** Never expose the API key in Client Components. Route Handlers and Server Actions run server-side, so `process.env` access is safe there.
+
+## Setup
+
+```bash
+# .env.local
+DOCAPI_KEY=pk_your_key_here
+```
+
+Get a key at [docapi.co/signup](https://www.docapi.co/signup) — 10 free PDFs, no credit card.

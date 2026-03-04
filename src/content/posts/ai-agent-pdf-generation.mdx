@@ -1,0 +1,307 @@
+---
+title: "Give Your AI Agent PDF Generation in 5 Minutes"
+description: "How to add PDF generation to an AI agent using the DocAPI tool. Works with LangChain, the Vercel AI SDK, Claude tool use, and any framework that supports function calling."
+date: "2026-03-04"
+slug: "ai-agent-pdf-generation"
+---
+
+AI agents can browse the web, query databases, and send emails. PDF generation is a natural extension — but most PDF libraries aren't designed for autonomous use. They require manual setup, browser binaries, or complex configuration.
+
+DocAPI works natively as an agent tool: HTTP-based, no binary dependencies, and self-registering with no human signup required. This guide shows how to wire it up in 5 minutes.
+
+## Why agents need PDF output
+
+AI agents are increasingly used for business automation: generating invoices after a sale, producing reports from database queries, creating contracts from form data. In each case, the agent needs to output a structured document — not just text.
+
+PDF is the standard format for these documents. It's renderable, printable, and portable. An agent that can generate PDFs can close the loop on most document workflows without human involvement.
+
+## The DocAPI tool definition
+
+Here's the tool definition for any function-calling framework:
+
+```typescript
+const generatePdfTool = {
+  name: 'generate_pdf',
+  description: 'Generate a PDF document from HTML. Use this when the user asks to create, generate, or export a document, invoice, report, certificate, or any formatted file.',
+  parameters: {
+    type: 'object',
+    properties: {
+      html: {
+        type: 'string',
+        description: 'The complete HTML document to render as a PDF. Include all styles inline or in a <style> tag. Do not reference external stylesheets that may not be available.',
+      },
+      filename: {
+        type: 'string',
+        description: 'The suggested filename for the PDF (without .pdf extension). Example: "invoice-2026-03"',
+      },
+      options: {
+        type: 'object',
+        description: 'PDF rendering options',
+        properties: {
+          format: {
+            type: 'string',
+            enum: ['A4', 'Letter', 'Legal'],
+            description: 'Page size. Default: A4',
+          },
+          landscape: {
+            type: 'boolean',
+            description: 'Landscape orientation. Default: false',
+          },
+          printBackground: {
+            type: 'boolean',
+            description: 'Include background colors and images. Default: true',
+          },
+        },
+      },
+    },
+    required: ['html'],
+  },
+}
+```
+
+## Implementing the tool function
+
+```typescript
+async function executePdfTool(args: {
+  html: string
+  filename?: string
+  options?: {
+    format?: 'A4' | 'Letter' | 'Legal'
+    landscape?: boolean
+    printBackground?: boolean
+  }
+}): Promise<{ success: boolean; url?: string; error?: string }> {
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html: args.html,
+      options: {
+        format: args.options?.format ?? 'A4',
+        landscape: args.options?.landscape ?? false,
+        printBackground: args.options?.printBackground ?? true,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    return { success: false, error }
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer())
+  const filename = `${args.filename ?? 'document'}.pdf`
+
+  // Store and return a URL — agents work better with URLs than binary data
+  const url = await uploadToStorage(buffer, filename)
+  return { success: true, url }
+}
+```
+
+Agents work best when the tool returns a URL rather than raw bytes. The agent can then include the URL in a response, email it, or save it to a record.
+
+## Claude tool use (Anthropic API)
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk'
+
+const client = new Anthropic()
+
+const tools: Anthropic.Tool[] = [
+  {
+    name: 'generate_pdf',
+    description: 'Generate a PDF document from HTML content.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        html: { type: 'string', description: 'Complete HTML document to render' },
+        filename: { type: 'string', description: 'Output filename without .pdf extension' },
+        format: { type: 'string', enum: ['A4', 'Letter'], description: 'Page size' },
+      },
+      required: ['html'],
+    },
+  },
+]
+
+async function runAgent(userMessage: string) {
+  const messages: Anthropic.MessageParam[] = [
+    { role: 'user', content: userMessage },
+  ]
+
+  while (true) {
+    const response = await client.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      tools,
+      messages,
+    })
+
+    if (response.stop_reason === 'end_turn') {
+      const textBlock = response.content.find(b => b.type === 'text')
+      return textBlock?.text
+    }
+
+    if (response.stop_reason === 'tool_use') {
+      const toolUse = response.content.find(b => b.type === 'tool_use')!
+      messages.push({ role: 'assistant', content: response.content })
+
+      if (toolUse.name === 'generate_pdf') {
+        const result = await executePdfTool(toolUse.input as any)
+        messages.push({
+          role: 'user',
+          content: [{
+            type: 'tool_result',
+            tool_use_id: toolUse.id,
+            content: JSON.stringify(result),
+          }],
+        })
+      }
+    }
+  }
+}
+
+// Usage
+const result = await runAgent('Generate a simple invoice for $500 of web development work for Acme Corp')
+```
+
+## Vercel AI SDK
+
+```typescript
+import { anthropic } from '@ai-sdk/anthropic'
+import { generateText, tool } from 'ai'
+import { z } from 'zod'
+
+const result = await generateText({
+  model: anthropic('claude-opus-4-6'),
+  tools: {
+    generate_pdf: tool({
+      description: 'Generate a PDF from HTML. Use for invoices, reports, certificates, and documents.',
+      parameters: z.object({
+        html: z.string().describe('Complete HTML document'),
+        filename: z.string().optional().describe('Output filename without extension'),
+        format: z.enum(['A4', 'Letter']).optional().default('A4'),
+      }),
+      execute: async ({ html, filename, format }) => {
+        const response = await fetch('https://api.docapi.co/v1/pdf', {
+          method: 'POST',
+          headers: { 'x-api-key': process.env.DOCAPI_KEY!, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html, options: { format, printBackground: true } }),
+        })
+
+        if (!response.ok) return { success: false, error: await response.text() }
+
+        const buffer = Buffer.from(await response.arrayBuffer())
+        const url = await uploadToStorage(buffer, `${filename ?? 'document'}.pdf`)
+        return { success: true, url }
+      },
+    }),
+  },
+  prompt: 'Create a simple one-page invoice for consulting services, $3,000 for January 2026.',
+  maxSteps: 5,
+})
+```
+
+## LangChain (Python)
+
+```python
+from langchain.tools import Tool
+from langchain_anthropic import ChatAnthropic
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+import requests
+
+def generate_pdf(html: str, filename: str = "document") -> dict:
+    """Generate a PDF from HTML. Returns a URL to the generated PDF."""
+    response = requests.post(
+        "https://api.docapi.co/v1/pdf",
+        headers={
+            "x-api-key": os.environ["DOCAPI_KEY"],
+            "Content-Type": "application/json",
+        },
+        json={
+            "html": html,
+            "options": {"format": "A4", "printBackground": True},
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    # Save locally for demo; in production upload to S3
+    path = f"/tmp/{filename}.pdf"
+    with open(path, "wb") as f:
+        f.write(response.content)
+
+    return {"success": True, "path": path}
+
+tools = [
+    Tool(
+        name="generate_pdf",
+        func=lambda args: generate_pdf(**eval(args)),
+        description="Generate a PDF document from HTML. Input should be a dict with 'html' and optional 'filename' keys.",
+    )
+]
+
+llm = ChatAnthropic(model="claude-opus-4-6")
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a document generation assistant."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+agent = create_tool_calling_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools)
+
+result = executor.invoke({"input": "Create a simple invoice for $500 of design work"})
+```
+
+## MCP (Model Context Protocol)
+
+DocAPI also exposes an MCP server at `https://mcp.docapi.co` for use with Claude Desktop and other MCP clients:
+
+```json
+{
+  "mcpServers": {
+    "docapi": {
+      "command": "npx",
+      "args": ["-y", "@docapi/mcp"],
+      "env": {
+        "DOCAPI_KEY": "pk_your_key_here"
+      }
+    }
+  }
+}
+```
+
+Add this to your `claude_desktop_config.json` and Claude Desktop gains PDF generation as a built-in capability. No code required.
+
+## Agent registration (no human signup)
+
+For autonomous agents that need to self-register and manage their own credits, DocAPI supports agent-native registration:
+
+```bash
+# Register and get an API key programmatically
+curl -X POST https://www.docapi.co/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "agent@yourapp.com", "agentId": "my-agent-001"}'
+
+# Response: { "api_key": "pk_...", "usdc_address": "0x...", "credits": 10 }
+```
+
+The agent receives 10 free credits on registration and can top up by sending USDC to its wallet address on Base mainnet. The balance is checked every 10 minutes and credits are added automatically.
+
+This means an agent can register itself, generate PDFs, monitor its own credit balance, and top up when needed — all without human involvement.
+
+## Get started
+
+```bash
+npm install @docapi/sdk
+```
+
+```bash
+DOCAPI_KEY=pk_your_key_here
+```
+
+Get a key at [docapi.co/signup](https://www.docapi.co/signup) — 10 free PDFs, no credit card required.

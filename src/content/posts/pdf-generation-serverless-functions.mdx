@@ -1,0 +1,248 @@
+---
+title: "PDF Generation in Serverless Functions (Vercel, AWS Lambda, Cloudflare Workers)"
+description: "Headless Chrome doesn't run in serverless environments. Here's how to generate PDFs from Vercel Edge Functions, AWS Lambda, and Cloudflare Workers using a PDF API instead."
+date: "2026-03-04"
+slug: "pdf-generation-serverless-functions"
+---
+
+Serverless functions have a problem with PDF generation: the most reliable way to produce pixel-perfect PDFs is headless Chrome, and headless Chrome does not run in serverless environments.
+
+Vercel Edge Functions have a 1 MB compressed code limit. AWS Lambda has a 250 MB unzipped limit. A minimal Chromium binary is around 300 MB. The math doesn't work.
+
+This guide covers how to generate PDFs from serverless functions using a PDF API that runs Chromium for you.
+
+## Why headless Chrome doesn't work in serverless
+
+The main options developers reach for — Puppeteer, Playwright, wkhtmltopdf — all require a full Chromium binary. That binary is too large for Lambda's package limit and completely unsupported in Edge runtimes.
+
+There are partial workarounds:
+
+- **`@sparticuz/chromium`** — a compressed, Lambda-compatible Chromium fork. It works on Lambda but requires a Lambda layer, adds cold start time, consumes significant memory (1–2 GB), and is not supported on Edge/Workers runtimes.
+- **Puppeteer in a container** — bypasses the package limit by using a Docker-based Lambda. Eliminates the simplicity of serverless.
+- **PDF libraries (jsPDF, pdfmake)** — generate PDFs programmatically from JavaScript. You're not writing HTML and CSS; you're placing text and shapes on a canvas. Two different code paths for the browser and the PDF.
+
+A PDF API solves all of these cleanly. Your function sends HTML and receives PDF bytes over HTTP. No binary dependencies, no cold start overhead, no Lambda layers.
+
+## Vercel
+
+### Edge Functions
+
+Edge Functions run in the V8 isolate runtime — no Node.js APIs, no file system, no native binaries. A PDF API is the only practical option.
+
+```typescript
+// app/api/pdf/route.ts
+import { NextRequest } from 'next/server'
+
+export const runtime = 'edge'
+
+export async function POST(req: NextRequest) {
+  const { html } = await req.json()
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.DOCAPI_KEY!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html,
+      options: { format: 'A4', printBackground: true },
+    }),
+  })
+
+  if (!response.ok) {
+    return new Response('PDF generation failed', { status: 502 })
+  }
+
+  const pdf = await response.arrayBuffer()
+
+  return new Response(pdf, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline; filename="document.pdf"',
+    },
+  })
+}
+```
+
+### Node.js Serverless Functions
+
+If you're on Vercel's Node.js runtime (not Edge), the same HTTP approach works. You can also use the SDK:
+
+```typescript
+// app/api/invoice/[id]/route.ts
+import { DocAPI } from '@docapi/sdk'
+import { NextRequest, NextResponse } from 'next/server'
+import { getInvoice } from '@/lib/db'
+
+const docapi = new DocAPI({ apiKey: process.env.DOCAPI_KEY! })
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const invoice = await getInvoice(params.id)
+  if (!invoice) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const html = renderInvoiceHtml(invoice)
+  const pdf = await docapi.pdf(html, { format: 'A4', printBackground: true })
+
+  return new Response(pdf, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
+    },
+  })
+}
+```
+
+## AWS Lambda (Node.js)
+
+Lambda's 250 MB package limit technically allows `@sparticuz/chromium` with some configuration, but the operational overhead is real. Using a PDF API instead keeps your Lambda lean.
+
+```typescript
+// handler.ts
+import { APIGatewayProxyHandler } from 'aws-lambda'
+
+const DOCAPI_KEY = process.env.DOCAPI_KEY!
+
+export const handler: APIGatewayProxyHandler = async (event) => {
+  const body = JSON.parse(event.body ?? '{}')
+  const { html, filename = 'document.pdf' } = body
+
+  if (!html) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'html is required' }) }
+  }
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: {
+      'x-api-key': DOCAPI_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html,
+      options: { format: 'A4', printBackground: true },
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    return { statusCode: 502, body: JSON.stringify({ error: err }) }
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer())
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+    body: buffer.toString('base64'),
+    isBase64Encoded: true,
+  }
+}
+```
+
+Lambda returns binary data via base64 encoding when `isBase64Encoded: true` is set. API Gateway decodes it before sending the response to the client.
+
+### Storing to S3 instead of returning inline
+
+For bulk generation or async workflows, upload the PDF to S3 and return the key:
+
+```typescript
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+
+const s3 = new S3Client({ region: 'us-east-1' })
+
+export const handler: APIGatewayProxyHandler = async (event) => {
+  const { html, key } = JSON.parse(event.body ?? '{}')
+
+  const response = await fetch('https://api.docapi.co/v1/pdf', {
+    method: 'POST',
+    headers: { 'x-api-key': DOCAPI_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ html, options: { format: 'A4' } }),
+  })
+
+  const pdfBuffer = Buffer.from(await response.arrayBuffer())
+
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.PDF_BUCKET!,
+    Key: key,
+    Body: pdfBuffer,
+    ContentType: 'application/pdf',
+  }))
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ key, bucket: process.env.PDF_BUCKET }),
+  }
+}
+```
+
+## Cloudflare Workers
+
+Workers run in the V8 isolate runtime like Vercel Edge — no Chromium possible. The fetch-based approach works directly:
+
+```typescript
+// worker.ts
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
+    }
+
+    const { html } = await request.json<{ html: string }>()
+
+    const pdfResponse = await fetch('https://api.docapi.co/v1/pdf', {
+      method: 'POST',
+      headers: {
+        'x-api-key': env.DOCAPI_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ html, options: { format: 'A4', printBackground: true } }),
+    })
+
+    if (!pdfResponse.ok) {
+      return new Response('PDF generation failed', { status: 502 })
+    }
+
+    return new Response(pdfResponse.body, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'inline; filename="document.pdf"',
+      },
+    })
+  },
+}
+```
+
+Note the body streaming: `pdfResponse.body` is passed directly instead of buffering with `arrayBuffer()`. This saves memory and reduces time-to-first-byte for large PDFs.
+
+## Handling credits in high-volume functions
+
+If your function generates PDFs at high volume, check the `X-Credits-Remaining` header and top up before you hit 0:
+
+```typescript
+const response = await fetch('https://api.docapi.co/v1/pdf', { ... })
+const remaining = parseInt(response.headers.get('X-Credits-Remaining') ?? '999')
+
+if (remaining < 50) {
+  // Trigger top-up in your billing system
+  await notifyLowCredits(remaining)
+}
+```
+
+## Summary
+
+| Runtime | Headless Chrome | PDF API |
+|---|---|---|
+| Vercel Edge | ❌ Unsupported | ✅ Works |
+| Vercel Node.js | ⚠️ Heavy layer | ✅ Works |
+| AWS Lambda | ⚠️ Complex setup | ✅ Works |
+| Cloudflare Workers | ❌ Unsupported | ✅ Works |
+
+A PDF API removes the infrastructure complexity entirely. Your function stays small, deploys anywhere, and generates pixel-perfect PDFs using the same HTML and CSS you write for the browser.
+
+Get started at [docapi.co](https://www.docapi.co) — 10 free PDFs, no card required.
