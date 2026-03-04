@@ -27,8 +27,10 @@ export default function Home() {
               </h1>
 
               <p className="mb-8 max-w-lg text-lg text-muted-foreground md:text-xl">
-                Generate PDFs in seconds. Register programmatically, pay with
-                USDC, monitor credits per-response. No dashboards required.
+                Generate pixel-perfect PDFs from HTML and CSS — powered by
+                headless Chromium. Full support for Flexbox, Grid, and web
+                fonts. Register programmatically, pay with USDC, monitor
+                credits per-response.
               </p>
 
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:justify-center md:justify-start">
@@ -50,6 +52,22 @@ export default function Home() {
                 </code>
                 . No credit card required.
               </p>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {[
+                  "Headless Chromium",
+                  "Flexbox & Grid",
+                  "Web Fonts",
+                  "Tailwind CSS",
+                  "printBackground",
+                ].map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border bg-muted/50 px-3 py-1 text-xs text-muted-foreground"
+                  >
+                    {tag}
+                  </span>
+                ))}</div>
             </div>
 
             {/* Right column - Code preview */}

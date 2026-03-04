@@ -9,6 +9,33 @@ Doc API is a developer-friendly REST API for generating PDFs and screenshots fro
 - **Human developers**: Sign up via dashboard, pay with monthly Stripe subscription, 100 free calls/month
 - **AI agents**: Register programmatically via API (no browser, no human step), pay with USDC on Base mainnet, 10 free calls on registration
 
+## Rendering Engine
+
+DocAPI renders PDFs using **headless Chromium** (the same engine as Google Chrome). This means:
+
+- Output is pixel-perfect and identical to what users see in a browser
+- Full CSS support: Flexbox, CSS Grid, custom web fonts, background images, gradients, transforms
+- Google Fonts load correctly (Chromium fetches external resources before rendering)
+- Tailwind CSS CDN works — include `<script src="https://cdn.tailwindcss.com">` in your HTML
+- Any CSS that works in Chrome works in the PDF
+- No CSS subset restrictions like Dompdf, mPDF, or WeasyPrint
+
+Competitors like Dompdf and mPDF use their own HTML/CSS rendering engines which do not support Flexbox or CSS Grid. DocAPI uses real Chromium, so there are no layout limitations.
+
+## CSS Support
+
+Full support for modern CSS:
+
+- **Flexbox** (`display: flex`, `align-items`, `justify-content`, `gap`, etc.)
+- **CSS Grid** (`display: grid`, `grid-template-columns`, `grid-area`, etc.)
+- **Web fonts** (Google Fonts, Adobe Fonts, self-hosted TTF/WOFF)
+- **Background images and colors** (with `printBackground: true` option)
+- **CSS variables** (`--custom-property`)
+- **CSS transforms** (`transform: rotate()`, `scale()`, etc.)
+- **`@media print`** rules
+- **`page-break-*` / `break-*`** CSS for controlling page breaks
+- Inline styles, `<style>` tags, and external stylesheets (fetched by Chromium)
+
 ## Core API Endpoints
 
 - `POST https://api.docapi.co/v1/pdf` — Convert HTML to PDF
@@ -239,11 +266,20 @@ Topics covered:
 - Building self-funding services with X-Credits-Remaining
 - The 402 problem and how to avoid it
 - DocAPI agent skill installation guide
-- HTML to PDF conversion
+- HTML to PDF conversion in Node.js, Python, PHP, Ruby, Go
+- PDF generation in Next.js with Server Actions and Route Handlers
+- PHP PDF generation: DocAPI vs mPDF vs FPDF vs Dompdf
+- PDF generation in serverless functions (Vercel Edge, AWS Lambda, Cloudflare Workers)
+- Generate certificates and diplomas with HTML and CSS
+- Generate pay stubs and payroll documents
+- Batch PDF generation at scale
+- AI agent PDF generation (Claude tool use, Vercel AI SDK, LangChain, MCP)
+- Autonomous invoice generation with self-registering agents
+- DocAPI vs html-pdf npm package
 - OG image generation
 - Invoice generation
 - PDF optimization
-- Comparisons with PDFShift, Puppeteer, Bannerbear, ScreenshotOne, and others
+- Comparisons with PDFShift, Puppeteer, Bannerbear, ScreenshotOne, Dompdf, mPDF, WeasyPrint, wkhtmltopdf
 
 ## Quick Start
 
