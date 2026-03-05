@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
-        <p className="text-muted-foreground">Last updated: March 2, 2026</p>
+        <p className="text-muted-foreground">Last updated: March 4, 2026</p>
       </div>
 
       <div className="space-y-8">
@@ -77,17 +77,28 @@ export default function PrivacyPage() {
             </div>
 
             <div className="border-l-4 border-green-500 pl-4">
-              <h3 className="font-semibold mb-2">2.5 Free Tools (Invoice Generator)</h3>
+              <h3 className="font-semibold mb-2">2.5 Free Tools</h3>
               <p className="text-muted-foreground leading-relaxed">
-                <strong className="text-foreground">We do not store any data you enter in our free tools.</strong>{" "}
-                Information such as company details, client information, and invoice
-                items are processed in real-time to generate your PDF and are immediately
-                discarded. No invoice data is saved on our servers.
+                <strong className="text-foreground">We do not store any data you enter in our free tools</strong>{" "}
+                (Invoice Generator, OG Image Generator, Resume Builder). All information
+                is processed in real-time to generate your output and is immediately
+                discarded. No document data is saved on our servers.
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-4">
-              <h3 className="font-semibold mb-2">2.6 IP Address and Rate Limiting</h3>
+              <h3 className="font-semibold mb-2">2.6 MCP Server</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Our MCP server at <code>mcp.docapi.co</code> accepts your API key on
+                a per-request basis via the <code>x-api-key</code> header. The server
+                does not store your API key or any credentials between requests. API
+                calls made through the MCP server are subject to the same usage
+                tracking described in section 2.2.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-primary pl-4">
+              <h3 className="font-semibold mb-2">2.7 IP Address and Rate Limiting</h3>
               <p className="text-muted-foreground leading-relaxed">
                 We collect IP addresses for rate limiting purposes (e.g., 5
                 programmatic registrations per day per IP). IP addresses used for rate
@@ -214,6 +225,10 @@ export default function PrivacyPage() {
             <li className="flex gap-3">
               <span className="text-primary font-bold">•</span>
               <span><strong className="text-foreground">Supabase:</strong> Our database provider, used to store account data, API keys, and credit balances.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-primary font-bold">•</span>
+              <span><strong className="text-foreground">Vercel:</strong> Our hosting provider for the website, dashboard, and MCP server. Vercel may process request metadata (IP addresses, request paths) as part of hosting. Vercel&apos;s privacy policy applies.</span>
             </li>
             <li className="flex gap-3">
               <span className="text-primary font-bold">•</span>

@@ -11,7 +11,7 @@ export default function TermsPage() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
-        <p className="text-muted-foreground">Last updated: March 2, 2026</p>
+        <p className="text-muted-foreground">Last updated: March 4, 2026</p>
       </div>
 
       <div className="space-y-8">
@@ -45,30 +45,45 @@ export default function TermsPage() {
             </li>
             <li className="flex gap-3">
               <span className="text-primary font-bold">•</span>
-              <span><strong className="text-foreground">Free Tools:</strong> Browser-based tools including our Invoice Generator that allow users to create documents without an account.</span>
+              <span><strong className="text-foreground">Free Tools:</strong> Browser-based tools including our Invoice Generator, OG Image Generator, and Resume Builder that allow users to create documents without an account.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-primary font-bold">•</span>
+              <span><strong className="text-foreground">MCP Server:</strong> A hosted Model Context Protocol server at <code>mcp.docapi.co</code> exposing DocAPI capabilities as tools to MCP-compatible AI clients. Authentication is per-request via your API key; no credentials are stored server-side.</span>
             </li>
           </ul>
         </section>
 
         <section className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-6">3. Free Tools (Invoice Generator)</h2>
+          <h2 className="text-xl font-semibold mb-6">3. Free Tools</h2>
 
           <div className="space-y-6">
             <div className="border-l-4 border-primary pl-4">
-              <h3 className="font-semibold mb-2">3.1 No Data Storage</h3>
+              <h3 className="font-semibold mb-2">3.1 Available Tools</h3>
+              <p className="text-muted-foreground leading-relaxed mb-3">
+                Our free browser-based tools include:
+              </p>
+              <ul className="space-y-2 text-muted-foreground ml-4">
+                <li className="flex gap-2"><span className="text-primary font-bold">•</span><span><strong className="text-foreground">Invoice Generator</strong> — create and download PDF invoices</span></li>
+                <li className="flex gap-2"><span className="text-primary font-bold">•</span><span><strong className="text-foreground">OG Image Generator</strong> — create Open Graph preview images</span></li>
+                <li className="flex gap-2"><span className="text-primary font-bold">•</span><span><strong className="text-foreground">Resume Builder</strong> — create and download PDF resumes</span></li>
+              </ul>
+            </div>
+
+            <div className="border-l-4 border-primary pl-4">
+              <h3 className="font-semibold mb-2">3.2 No Data Storage</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Our free Invoice Generator tool does not store any data you enter. All
-                information (company details, client information, line items, etc.) is
-                processed in real-time to generate your PDF and is not saved on our
+                Our free tools do not store any data you enter. All information is
+                processed in real-time to generate your output and is not saved on our
                 servers. Once you close the browser tab, all entered data is lost.
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-4">
-              <h3 className="font-semibold mb-2">3.2 Intended Use</h3>
+              <h3 className="font-semibold mb-2">3.3 Intended Use</h3>
               <p className="text-muted-foreground leading-relaxed mb-3">
-                The Invoice Generator is provided for legitimate business purposes
-                only. You agree not to use this tool to:
+                Our free tools are provided for legitimate purposes only. You agree
+                not to use these tools to:
               </p>
               <ul className="space-y-2 text-muted-foreground ml-4">
                 <li className="flex gap-2">
@@ -91,18 +106,18 @@ export default function TermsPage() {
             </div>
 
             <div className="border-l-4 border-primary pl-4">
-              <h3 className="font-semibold mb-2">3.3 No Warranty</h3>
+              <h3 className="font-semibold mb-2">3.4 No Warranty</h3>
               <p className="text-muted-foreground leading-relaxed">
-                The free Invoice Generator is provided &quot;as is&quot; without any warranty.
-                We do not guarantee that the tool will be available at all times or
-                that generated invoices will meet specific legal requirements in your
-                jurisdiction. You are responsible for ensuring your invoices comply
-                with applicable laws and regulations.
+                Our free tools are provided &quot;as is&quot; without any warranty. We do not
+                guarantee that tools will be available at all times or that generated
+                documents will meet specific legal requirements in your jurisdiction.
+                You are responsible for ensuring any documents you create comply with
+                applicable laws and regulations.
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-4">
-              <h3 className="font-semibold mb-2">3.4 Tax Calculations</h3>
+              <h3 className="font-semibold mb-2">3.5 Tax Calculations</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Any tax calculations performed by our tools are for convenience only.
                 You are solely responsible for determining the correct tax rates and
