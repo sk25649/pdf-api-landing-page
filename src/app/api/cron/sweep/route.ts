@@ -12,10 +12,10 @@ const USDC_DECIMALS = 1_000_000; // 6 decimals
 const CREDITS_PER_USDC = 50;
 const MIN_SWEEP_AMOUNT = BigInt(500_000); // 0.5 USDC in atomic units
 
-// Check USDC balance via public RPC — no gas, no CDP SDK needed
-async function getUsdcBalance(address: string): Promise<bigint> {
+// Check USDC balance via RPC — no gas, no CDP SDK needed
+async function getUsdcBalance(address: string, rpcUrl: string): Promise<bigint> {
   const padded = address.slice(2).toLowerCase().padStart(64, "0");
-  const res = await fetch("https://mainnet.base.org", {
+  const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -25,8 +25,9 @@ async function getUsdcBalance(address: string): Promise<bigint> {
       id: 1,
     }),
   });
-  const json = await res.json() as { result: string };
-  return BigInt(json.result ?? "0x0");
+  const json = await res.json() as { result: string | null; error?: unknown };
+  if (!json.result) throw new Error(`eth_call failed: ${JSON.stringify(json)}`);
+  return BigInt(json.result);
 }
 
 export async function GET(request: NextRequest) {
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
   if (!treasury) {
     return NextResponse.json({ error: "TREASURY_USDC_ADDRESS not set" }, { status: 500 });
   }
+
+  const rpcUrl = process.env.CDP_PAYMASTER_URL ?? "https://mainnet.base.org";
 
   // Fetch all agent wallets
   const { data: agents, error } = await supabaseAdmin
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
   for (const agent of agents ?? []) {
     try {
       // Check on-chain USDC balance via RPC (free, no gas needed)
-      const balance = await getUsdcBalance(agent.usdc_address);
+      const balance = await getUsdcBalance(agent.usdc_address, rpcUrl);
       const lastCredited = BigInt(agent.usdc_credited_atomic ?? 0);
       const delta = balance - lastCredited;
 
@@ -98,7 +101,7 @@ export async function GET(request: NextRequest) {
       }
 
       const paymasterUrl = process.env.CDP_PAYMASTER_URL;
-      let debugInfo = `paymasterUrl=${paymasterUrl ? "set" : "NOT SET"}`;
+      let debugInfo = `balance=${balance} lastCredited=${lastCredited} delta=${delta} paymasterUrl=${paymasterUrl ? "set" : "NOT SET"}`;
       try {
         const cdp = new CdpClient({
           apiKeyId: process.env.CDP_API_KEY_ID!,
