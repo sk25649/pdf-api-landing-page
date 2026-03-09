@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
     swept: string;
     txHash?: string;
     error?: string;
-    debug?: string;
   }[] = [];
 
   for (const agent of agents ?? []) {
@@ -101,7 +100,6 @@ export async function GET(request: NextRequest) {
       }
 
       const paymasterUrl = process.env.CDP_PAYMASTER_URL;
-      let debugInfo = `balance=${balance} lastCredited=${lastCredited} delta=${delta} paymasterUrl=${paymasterUrl ? "set" : "NOT SET"}`;
       try {
         const cdp = new CdpClient({
           apiKeyId: process.env.CDP_API_KEY_ID!,
@@ -117,9 +115,7 @@ export async function GET(request: NextRequest) {
         try {
           const safeId = agent.user_id.replace(/-/g, "").slice(0, 24);
           const owner = await cdp.evm.getAccount({ name: `agent-owner-${safeId}` });
-          debugInfo += ` | owner=${owner.address}`;
           const smartAccount = await cdp.evm.getSmartAccount({ owner, name: `agent-${safeId}` });
-          debugInfo += ` | smart=${smartAccount.address}`;
           const networkAccount = await smartAccount.useNetwork("base");
           const result = await networkAccount.transfer({
             to: treasury,
@@ -128,10 +124,7 @@ export async function GET(request: NextRequest) {
             ...(paymasterUrl ? { paymasterUrl } : {}),
           });
           txHash = result.userOpHash;
-          debugInfo += ` | userOpHash=${txHash}`;
-        } catch (smartErr) {
-          const smartMsg = smartErr instanceof Error ? smartErr.message : String(smartErr);
-          debugInfo += ` | smartErr=${smartMsg}`;
+        } catch {
           // Legacy EOA wallet — no smart account, needs ETH for gas
           try {
             const account = await cdp.evm.getAccount({ address: agent.usdc_address });
@@ -164,12 +157,12 @@ export async function GET(request: NextRequest) {
           tx_hash: txHash,
         });
 
-        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash, debug: debugInfo });
+        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: balance.toString(), txHash });
         console.log(`Swept ${Number(balance) / USDC_DECIMALS} USDC from ${agent.usdc_address} → treasury tx: ${txHash}`);
       } catch (sweepErr) {
         const msg = sweepErr instanceof Error ? sweepErr.message : String(sweepErr);
         console.warn(`Sweep failed for ${agent.usdc_address} (credits already applied): ${msg}`);
-        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: "0", error: `sweep failed: ${msg}`, debug: debugInfo });
+        results.push({ address: agent.usdc_address, credits_added: creditsAdded, swept: "0", error: `sweep failed: ${msg}` });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
