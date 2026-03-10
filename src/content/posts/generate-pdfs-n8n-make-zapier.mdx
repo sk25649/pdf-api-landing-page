@@ -1,0 +1,361 @@
+---
+title: "How to Generate PDFs in n8n, Make, and Zapier"
+description: "Step-by-step guide to adding PDF generation to your no-code and low-code automation workflows using n8n, Make (formerly Integromat), and Zapier with the DocAPI PDF API."
+date: "2026-03-10"
+slug: "generate-pdfs-n8n-make-zapier"
+---
+
+If you're building automation workflows in n8n, Make, or Zapier, you'll eventually need to generate a PDF — an invoice after a Stripe payment, a contract when a deal closes in HubSpot, a report when a form is submitted.
+
+The cleanest way to do this in all three tools is the same: call a PDF API with an HTTP request, pass your HTML, and get back a PDF. No headless Chrome servers, no dependencies, no infrastructure to manage.
+
+This guide covers how to set it up in each platform.
+
+---
+
+## How the API call works
+
+DocAPI accepts a `POST` request with your HTML and returns a PDF file:
+
+```
+POST https://api.docapi.co/v1/pdf
+x-api-key: your-api-key
+Content-Type: application/json
+
+{
+  "html": "<h1>Hello World</h1>",
+  "options": {
+    "format": "A4",
+    "printBackground": true
+  }
+}
+```
+
+The response body is raw PDF bytes. You'll either save this to a file, upload it to cloud storage, or pass it as an attachment to an email step.
+
+Get a free API key at [docapi.co](https://www.docapi.co) — 10 free credits, no card required.
+
+---
+
+## n8n
+
+n8n is the most flexible of the three. You configure PDF generation with an **HTTP Request** node, and you can inject dynamic data from previous nodes using n8n expressions.
+
+### Step 1: Add an HTTP Request node
+
+Add an **HTTP Request** node wherever you want to generate the PDF in your workflow.
+
+Configure it as follows:
+
+- **Method:** `POST`
+- **URL:** `https://api.docapi.co/v1/pdf`
+- **Authentication:** None (you'll add the key as a header)
+- **Response Format:** `File`
+
+The `File` response format is critical — it tells n8n to treat the response body as binary data rather than trying to parse it as JSON.
+
+### Step 2: Add headers
+
+Under **Headers**, add:
+
+| Name | Value |
+|---|---|
+| `x-api-key` | `your-api-key` |
+| `Content-Type` | `application/json` |
+
+### Step 3: Set the body
+
+Set **Body Type** to `Raw` and **Content Type** to `JSON`. In the body field:
+
+```json
+{
+  "html": "={{ '<h1>Invoice #' + $json.invoice_number + '</h1><p>Amount: $' + $json.amount + '</p>' }}",
+  "options": {
+    "format": "A4",
+    "printBackground": true
+  }
+}
+```
+
+n8n expressions (`={{ }}`) let you pull data from any previous node. A more realistic example using a full HTML template:
+
+```json
+{
+  "html": "={{ '<html><body style=\"font-family: Arial; padding: 40px\"><h1>Invoice #' + $json.number + '</h1><p>Bill To: ' + $json.customer_name + '</p><p>Amount Due: $' + $json.total + '</p><p>Due: ' + $json.due_date + '</p></body></html>' }}",
+  "options": {
+    "format": "A4",
+    "margin": {
+      "top": "20mm",
+      "bottom": "20mm",
+      "left": "20mm",
+      "right": "20mm"
+    }
+  }
+}
+```
+
+For longer templates, use an **n8n Code node** before the HTTP Request to build the HTML string and store it in `$json.html`, then reference it with `={{ $json.html }}` in the body.
+
+### Step 4: Save the PDF
+
+The HTTP Request node outputs the PDF as a binary item. You can pass it directly to:
+
+- **Send Email** node → attach it as a file
+- **Google Drive** node → upload it with `Create File`
+- **S3** node → store it in a bucket
+- **Write Binary File** node → save it locally (self-hosted n8n)
+
+### Full n8n workflow example: Stripe payment → PDF invoice → Email
+
+```
+Stripe Trigger (payment_intent.succeeded)
+  → Code Node (build invoice HTML from Stripe data)
+  → HTTP Request (POST to DocAPI)
+  → Gmail Node (send email with PDF attachment)
+```
+
+In the Code node:
+
+```javascript
+const data = $input.first().json;
+
+const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+    h1 { font-size: 28px; }
+    .meta { color: #666; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f5f5f5; padding: 12px; text-align: left; }
+    td { padding: 12px; border-bottom: 1px solid #eee; }
+    .total { font-size: 20px; font-weight: bold; text-align: right; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Invoice</h1>
+  <div class="meta">
+    <p>Invoice ID: ${data.id}</p>
+    <p>Date: ${new Date(data.created * 1000).toLocaleDateString()}</p>
+    <p>Customer: ${data.customer_email}</p>
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>${data.description || 'Payment'}</td>
+        <td>$${(data.amount / 100).toFixed(2)}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="total">Total: $${(data.amount / 100).toFixed(2)} ${data.currency.toUpperCase()}</div>
+</body>
+</html>
+`;
+
+return [{ json: { html, customer_email: data.customer_email } }];
+```
+
+---
+
+## Make (formerly Integromat)
+
+Make uses **HTTP modules** for custom API calls. The setup is similar to n8n.
+
+### Step 1: Add an HTTP module
+
+Search for **HTTP → Make a Request** in the module picker.
+
+Configure it:
+
+- **URL:** `https://api.docapi.co/v1/pdf`
+- **Method:** `POST`
+- **Parse response:** Disabled (you want raw bytes)
+
+### Step 2: Add headers
+
+Click **Add header** for each:
+
+| Key | Value |
+|---|---|
+| `x-api-key` | `your-api-key` |
+| `Content-Type` | `application/json` |
+
+### Step 3: Set the body
+
+- **Body type:** `Raw`
+- **Content type:** `application/json`
+- **Request content:**
+
+```json
+{
+  "html": "<html><body><h1>Invoice #{{1.invoice_number}}</h1><p>Customer: {{1.customer_name}}</p><p>Total: ${{1.amount}}</p></body></html>",
+  "options": {
+    "format": "A4",
+    "printBackground": true
+  }
+}
+```
+
+Replace `{{1.invoice_number}}` with the actual path to your data from earlier modules. Make uses `{{module_number.field_name}}` syntax.
+
+### Step 4: Handle the binary output
+
+After the HTTP module, the PDF is available as a binary data collection. Pipe it to:
+
+- **Email → Send an Email** module → set the attachment to the HTTP module's data
+- **Google Drive → Upload a File** module
+- **Dropbox → Upload a File** module
+
+For Google Drive, set:
+- **File name:** `invoice-{{1.number}}.pdf`
+- **Data:** Select the HTTP module's output data
+
+### Full Make scenario: Typeform submission → PDF certificate → Email
+
+```
+Typeform → Watch Responses
+  → HTTP → Make a Request (DocAPI)
+  → Email → Send an Email
+```
+
+In the HTTP module body, reference the Typeform fields:
+
+```json
+{
+  "html": "<html><body style='font-family: Georgia; text-align: center; padding: 60px'><h1>Certificate of Completion</h1><p>This certifies that</p><h2>{{2.answers[0].text}}</h2><p>has successfully completed the course</p><h3>{{2.hidden.course_name}}</h3><p>{{formatDate(now; 'MMMM D, YYYY')}}</p></body></html>",
+  "options": { "format": "A4", "landscape": true }
+}
+```
+
+---
+
+## Zapier
+
+Zapier is the most restrictive of the three for custom HTTP calls, but it works with either the **Webhooks by Zapier** action or a **Code by Zapier** step.
+
+### Option A: Webhooks by Zapier (no-code)
+
+1. Add a **Webhooks by Zapier** action step
+2. Choose **Custom Request**
+3. Configure:
+   - **Method:** `POST`
+   - **URL:** `https://api.docapi.co/v1/pdf`
+   - **Data Pass-Through:** `False`
+   - **Data:** Leave blank (you'll use payload)
+   - **Unflatten:** `No`
+   - **Headers:**
+     - `x-api-key: your-api-key`
+     - `Content-Type: application/json`
+   - **Payload Type:** `json`
+
+For the **Data** field, enter the JSON body using Zapier's field mapping syntax:
+
+```
+html: <html><body><h1>Invoice #{{invoice_number}}</h1><p>Due: ${{amount}}</p></body></html>
+options|format: A4
+options|printBackground: true
+```
+
+Zapier's nested key syntax (`options|format`) handles nested JSON objects.
+
+**Limitation:** The Webhooks response in Zapier returns the raw body as a string. Zapier can't natively attach this as a PDF file to an email. You'll need to first upload it somewhere (see Option B).
+
+### Option B: Code by Zapier (more control)
+
+For full control — including base64-encoding the PDF and uploading to Google Drive — use **Code by Zapier** (JavaScript):
+
+```javascript
+const response = await fetch('https://api.docapi.co/v1/pdf', {
+  method: 'POST',
+  headers: {
+    'x-api-key': process.env.DOCAPI_KEY || inputData.apiKey,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    html: `
+      <html>
+        <body style="font-family: Arial; padding: 40px">
+          <h1>Invoice #${inputData.invoiceNumber}</h1>
+          <p>Bill To: ${inputData.customerName}</p>
+          <p>Amount: $${inputData.amount}</p>
+          <p>Due: ${inputData.dueDate}</p>
+        </body>
+      </html>
+    `,
+    options: { format: 'A4', printBackground: true },
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(`DocAPI error: ${response.status}`);
+}
+
+const buffer = await response.arrayBuffer();
+const base64 = Buffer.from(buffer).toString('base64');
+
+return { pdf_base64: base64, filename: `invoice-${inputData.invoiceNumber}.pdf` };
+```
+
+Then in a subsequent **Google Drive → Upload File** step:
+- **File:** Use the `pdf_base64` output from the code step
+- **Convert Base64:** Yes (toggle this on)
+- **File Name:** Use the `filename` output
+
+### Full Zapier workflow: New Stripe charge → PDF invoice → Gmail
+
+```
+Trigger: Stripe → New Charge
+  → Code by Zapier (generate PDF, return base64)
+  → Google Drive → Upload File (store PDF)
+  → Gmail → Send Email (link to Drive file)
+```
+
+---
+
+## Which platform should you use?
+
+| Feature | n8n | Make | Zapier |
+|---|---|---|---|
+| Custom HTTP requests | ✅ Full control | ✅ Full control | ⚠️ Limited |
+| Binary file handling | ✅ Native | ✅ Native | ⚠️ Needs workaround |
+| Dynamic HTML templates | ✅ Code node | ✅ Built-in | ✅ Code step |
+| Cost | Free (self-hosted) | Free tier available | Paid for webhooks |
+| Self-hostable | ✅ Yes | ❌ No | ❌ No |
+
+**n8n** is the best choice if you want full control and are comfortable self-hosting. **Make** is a strong middle ground with a generous free tier. **Zapier** works but requires more workarounds for binary file handling.
+
+---
+
+## Common triggers for PDF generation workflows
+
+- **Stripe** — generate and send an invoice PDF when `payment_intent.succeeded` fires
+- **Typeform / Tally** — generate a certificate or summary PDF on form submission
+- **HubSpot / Pipedrive** — generate a contract PDF when a deal moves to "Closed Won"
+- **Airtable / Google Sheets** — generate a report PDF when a row is marked "Ready"
+- **WooCommerce / Shopify** — generate a packing slip or receipt PDF on new order
+- **Calendly** — generate a confirmation PDF when a booking is created
+
+---
+
+## Tips for better PDFs in automation workflows
+
+**1. Build the HTML in a code step, not the request body.**
+Long HTML strings in JSON are hard to read and break easily. Use a Code/Function node to construct the HTML string, then pass it to the HTTP request.
+
+**2. Use inline CSS only.**
+Some PDF renderers ignore `<style>` blocks in certain automation contexts. Inline styles (`style="..."`) always work.
+
+**3. Set `printBackground: true` for colored backgrounds.**
+Without this, background colors and gradients are stripped from the PDF.
+
+**4. Test with a minimal HTML first.**
+Before wiring up your full template, test with `<h1>Hello</h1>` to confirm the API call is configured correctly.
+
+**5. Store PDFs in cloud storage, not email attachments.**
+If you'll generate the same PDF multiple times, store it in Google Drive, S3, or Dropbox and share a link. Sending large PDF attachments at volume can hit email provider limits.
+
+---
+
+Get started at [docapi.co](https://www.docapi.co) — 10 free PDFs on signup, no card required.
