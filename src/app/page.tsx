@@ -370,6 +370,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Demo Video Section */}
+      <section className="border-t border-zinc-800 px-4 py-24">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-10 text-center">
+            <h2 className="mb-3 text-3xl font-bold tracking-tight text-white">
+              See it in action
+            </h2>
+            <p className="text-zinc-400">
+              An agent self-registers, generates invoices, hits a 402, tops up autonomously with USDC, and resumes — no human in the loop.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-zinc-800 shadow-2xl" style={{ aspectRatio: "16/9" }}>
+            <iframe
+              src="https://www.youtube.com/embed/fjVrQf6Di5g"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="h-full w-full"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <PricingTable />
     </main>
