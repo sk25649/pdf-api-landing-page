@@ -454,6 +454,53 @@ export default function Home() {
 
       {/* Pricing Section */}
       <PricingTable />
+
+      {/* FAQ Section */}
+      <section className="border-t py-20">
+        <div className="container mx-auto max-w-3xl px-4">
+          <h2 className="mb-12 text-center text-3xl font-bold">
+            Frequently asked questions
+          </h2>
+          <div className="divide-y">
+            {[
+              {
+                q: "How reliable is the API?",
+                a: "Doc API runs on managed infrastructure with automatic scaling. You get the same headless Chromium rendering as Puppeteer — without managing the process yourself. If a render fails, retry it. There's no browser to crash or leak memory on your side.",
+              },
+              {
+                q: "How fast is PDF generation?",
+                a: "Cold start is roughly 10ms (vs. 3–5 seconds with self-hosted Puppeteer). Actual render time depends on your HTML complexity, but most documents generate in under 2 seconds end-to-end.",
+              },
+              {
+                q: "Can I use this in production?",
+                a: "Yes. The Pro and Business plans include priority and dedicated support respectively, plus SLA guarantees on Business. The Free tier is great for prototyping — upgrade when you're ready to ship.",
+              },
+              {
+                q: "Do I need to use USDC / crypto?",
+                a: "No. Human plans use standard monthly billing via Stripe. The USDC payment option exists specifically for AI agents that can't use credit cards. Pick whichever model fits your use case.",
+              },
+              {
+                q: "What CSS features are supported?",
+                a: "Everything Chrome supports — Flexbox, Grid, web fonts, Tailwind CSS, media queries, print stylesheets. If it renders in Chrome, it renders in your PDF.",
+              },
+              {
+                q: "What happens if I exceed my plan limit?",
+                a: "API calls beyond your monthly limit return a 429 status. You can upgrade your plan anytime from the dashboard, or switch to the agent pay-per-use model for overflow.",
+              },
+            ].map((faq) => (
+              <details key={faq.q} className="group py-5">
+                <summary className="flex cursor-pointer items-center justify-between font-medium">
+                  {faq.q}
+                  <span className="ml-4 text-muted-foreground transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  {faq.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
