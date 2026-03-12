@@ -164,6 +164,66 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Why Switch from Puppeteer */}
+      <section className="border-t bg-muted/30 py-20">
+        <div className="container mx-auto px-4">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold">
+              Why developers switch from Puppeteer
+            </h2>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+              Same Chromium rendering. None of the infrastructure.
+            </p>
+          </div>
+          <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border bg-background">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="px-6 py-4 text-left font-medium text-muted-foreground"></th>
+                  <th className="px-6 py-4 text-center font-medium text-muted-foreground">Puppeteer</th>
+                  <th className="px-6 py-4 text-center font-medium text-primary">Doc API</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="px-6 py-4 font-medium">Cold start</td>
+                  <td className="px-6 py-4 text-center text-red-500">3–5 seconds</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">~10 ms</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="px-6 py-4 font-medium">Binary size</td>
+                  <td className="px-6 py-4 text-center text-red-500">150 MB+</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">0 MB (API call)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="px-6 py-4 font-medium">Lambda/Vercel setup</td>
+                  <td className="px-6 py-4 text-center text-red-500">Custom layers, Docker</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">Works out of the box</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="px-6 py-4 font-medium">Memory leaks</td>
+                  <td className="px-6 py-4 text-center text-red-500">Common under load</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">Not your problem</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="px-6 py-4 font-medium">CSS support</td>
+                  <td className="px-6 py-4 text-center text-yellow-600">Full (you manage it)</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">Full (we manage it)</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 font-medium">Integration code</td>
+                  <td className="px-6 py-4 text-center text-red-500">50+ lines</td>
+                  <td className="px-6 py-4 text-center text-green-600 font-semibold">3 lines</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Same headless Chromium under the hood — without the ops burden.
+          </p>
+        </div>
+      </section>
+
       {/* Code Examples Section */}
       <CodeExample />
 
