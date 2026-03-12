@@ -164,6 +164,33 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Trust Bar */}
+      <section className="border-t bg-background py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-center sm:gap-16">
+            <div>
+              <div className="text-2xl font-bold">~10ms</div>
+              <div className="text-sm text-muted-foreground">Cold start</div>
+            </div>
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div>
+              <div className="text-2xl font-bold">4 lines</div>
+              <div className="text-sm text-muted-foreground">To generate a PDF</div>
+            </div>
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div>
+              <div className="text-2xl font-bold">43+</div>
+              <div className="text-sm text-muted-foreground">Agent integrations</div>
+            </div>
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div>
+              <div className="text-2xl font-bold">100%</div>
+              <div className="text-sm text-muted-foreground">Chrome CSS support</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Why Switch from Puppeteer */}
       <section className="border-t bg-muted/30 py-20">
         <div className="container mx-auto px-4">
