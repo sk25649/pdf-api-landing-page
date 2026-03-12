@@ -137,6 +137,22 @@ export function InvoiceGeneratorClient() {
                   </>
                 )}
               </Button>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Powered by{" "}
+                <a
+                  href="/pricing"
+                  className="underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  DocAPI
+                </a>
+                {" — "}
+                <a
+                  href="/docs"
+                  className="underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  Generate invoices via API →
+                </a>
+              </p>
             </div>
           </div>
 
