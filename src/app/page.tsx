@@ -16,7 +16,7 @@ export default function Home() {
             <div className="flex-1 text-center md:text-left">
               <div className="mb-6 inline-flex items-center rounded-full border bg-muted/50 px-4 py-1.5 text-sm font-medium">
                 <span className="mr-2">🤖</span>
-                Agent-native PDF API
+                Agentic-first PDF API
               </div>
 
               <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
@@ -273,14 +273,17 @@ export default function Home() {
           </div>
 
           {/* MCP Server callout */}
-          <div className="mx-auto mb-6 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
+          <div className="mx-auto mb-6 max-w-6xl rounded-xl border-2 border-primary/30 bg-primary/5 px-6 py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium">
-                  MCP Server — connect Claude Desktop and Cursor in 30 seconds
+                <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                  ⚡ Key differentiator
+                </div>
+                <p className="text-sm font-semibold">
+                  Native MCP Server — the only PDF API listed on every major MCP registry
                 </p>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  Add one block to your config and Claude can generate PDFs and screenshots directly. No code required.
+                  Add one block to your config and Claude, Cursor, or Windsurf can generate PDFs directly. No code required.
                 </p>
               </div>
               <div className="shrink-0">
@@ -293,20 +296,74 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <a
                 href="/docs#mcp-server"
                 className="text-primary underline-offset-4 hover:underline"
               >
                 Setup guide →
               </a>
-              <span className="mx-2">·</span>
-              Works with Claude Desktop, Cursor, and any MCP-compatible client
+              <span className="hidden sm:inline text-border">|</span>
+              <span className="font-medium text-foreground">Listed on:</span>
+              <a
+                href="https://glama.ai/mcp/servers"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                Glama
+              </a>
+              <a
+                href="https://pulsemcp.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                PulseMCP
+              </a>
+              <a
+                href="https://smithery.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                Smithery
+              </a>
+              <a
+                href="https://mcp.so"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                mcp.so
+              </a>
+            </div>
+          </div>
+
+          {/* Works With */}
+          <div className="mx-auto mb-10 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
+            <p className="mb-4 text-sm font-medium text-center">Works with</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {[
+                { name: "Claude Desktop", emoji: "🤖" },
+                { name: "Cursor", emoji: "⌨️" },
+                { name: "VS Code", emoji: "💻" },
+                { name: "Windsurf", emoji: "🏄" },
+                { name: "Any MCP client", emoji: "🔌" },
+              ].map((tool) => (
+                <span
+                  key={tool.name}
+                  className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm font-medium"
+                >
+                  <span>{tool.emoji}</span>
+                  {tool.name}
+                </span>
+              ))}
             </div>
           </div>
 
           {/* Skills.sh callout */}
-          <div className="mx-auto mb-10 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
+          <div className="mx-auto mb-6 max-w-6xl rounded-xl border bg-muted/40 px-6 py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium">
