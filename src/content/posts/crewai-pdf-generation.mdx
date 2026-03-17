@@ -1,0 +1,209 @@
+---
+title: "Generate PDFs with CrewAI Agents and DocAPI"
+description: "Add PDF generation to your CrewAI crews with one tool. Agents write HTML, DocAPI converts it — no Puppeteer, no infrastructure."
+date: "2026-03-17"
+author: "Siwan"
+---
+
+CrewAI makes it easy to build multi-agent systems where specialized agents collaborate to complete complex tasks. One common need: generating polished PDF reports as the final output of a crew's work.
+
+The problem is that most PDF libraries aren't agent-friendly. They require managing Chromium binaries, dealing with cold starts, or complex setup that doesn't fit neatly into an agent workflow.
+
+DocAPI solves this with a single API call. Here's how to wire it into a CrewAI crew.
+
+---
+
+## Setup
+
+Install CrewAI and the `requests` library:
+
+```bash
+pip install crewai crewai-tools requests
+```
+
+Get a free DocAPI key at [docapi.co/signup](https://docapi.co/signup) — 100 free calls, no credit card.
+
+Or if you're building an agent that should self-fund its own operations:
+
+```python
+import requests
+
+# Agent self-registers — no email, no dashboard
+reg = requests.post('https://api.docapi.co/api/register').json()
+api_key = reg['api_key']
+print(f"API key: {api_key}")
+print(f"Free credits: {reg['credits']}")
+```
+
+---
+
+## Create the PDF Tool
+
+Wrap DocAPI as a CrewAI tool:
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+import requests
+import os
+
+
+class PDFInput(BaseModel):
+    html: str = Field(description="HTML content to convert to PDF")
+    filename: str = Field(default="report.pdf", description="Output filename")
+
+
+class DocAPIPDFTool(BaseTool):
+    name: str = "generate_pdf"
+    description: str = (
+        "Convert HTML content to a PDF file. "
+        "Use this when the crew needs to produce a professional PDF report. "
+        "Pass complete HTML with inline styles for best results."
+    )
+    args_schema: type[BaseModel] = PDFInput
+
+    def _run(self, html: str, filename: str = "report.pdf") -> str:
+        api_key = os.environ.get("DOCAPI_KEY")
+        
+        response = requests.post(
+            "https://api.docapi.co/v1/pdf",
+            headers={
+                "x-api-key": api_key,
+                "Content-Type": "application/json",
+            },
+            json={"html": html},
+        )
+        
+        if not response.ok:
+            return f"PDF generation failed: {response.status_code}"
+        
+        # Save to disk
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        
+        credits_remaining = response.headers.get("X-Credits-Remaining", "unknown")
+        return f"PDF saved to {filename} ({len(response.content)} bytes). Credits remaining: {credits_remaining}"
+```
+
+---
+
+## Build the Crew
+
+Here's a complete crew that researches a topic, writes a report, and exports it as PDF:
+
+```python
+from crewai import Agent, Task, Crew, Process
+from langchain_anthropic import ChatAnthropic
+
+llm = ChatAnthropic(model="claude-3-5-sonnet-20241022")
+pdf_tool = DocAPIPDFTool()
+
+# Agent 1: Researcher
+researcher = Agent(
+    role="Market Research Analyst",
+    goal="Gather comprehensive data on the assigned topic",
+    backstory="Expert analyst who synthesizes market data into clear insights.",
+    llm=llm,
+    verbose=True,
+)
+
+# Agent 2: Writer
+writer = Agent(
+    role="Technical Writer",
+    goal="Transform research into professional HTML reports",
+    backstory=(
+        "Skilled at converting raw data into well-structured HTML reports "
+        "with clean inline styles suitable for PDF generation."
+    ),
+    llm=llm,
+    verbose=True,
+)
+
+# Agent 3: Publisher
+publisher = Agent(
+    role="PDF Publisher",
+    goal="Convert HTML reports to PDF using DocAPI",
+    backstory="Handles final report delivery, ensuring professional PDF output.",
+    tools=[pdf_tool],
+    llm=llm,
+    verbose=True,
+)
+
+# Tasks
+research_task = Task(
+    description="Research the current state of {topic}. Include key statistics, trends, and insights.",
+    expected_output="A detailed research summary with data points and analysis.",
+    agent=researcher,
+)
+
+write_task = Task(
+    description=(
+        "Convert the research into a professional HTML report. "
+        "Use inline CSS for styling. Include a header, executive summary, "
+        "key findings section, and conclusion. Make it visually polished."
+    ),
+    expected_output="Complete HTML document with inline styles ready for PDF conversion.",
+    agent=writer,
+    context=[research_task],
+)
+
+publish_task = Task(
+    description=(
+        "Convert the HTML report to PDF using the generate_pdf tool. "
+        "Save it as '{topic_slug}-report.pdf'."
+    ),
+    expected_output="Confirmation that the PDF was saved with file size and path.",
+    agent=publisher,
+    tools=[pdf_tool],
+    context=[write_task],
+)
+
+# Assemble and run the crew
+crew = Crew(
+    agents=[researcher, writer, publisher],
+    tasks=[research_task, write_task, publish_task],
+    process=Process.sequential,
+    verbose=True,
+)
+
+result = crew.kickoff(inputs={
+    "topic": "AI agent frameworks in 2026",
+    "topic_slug": "ai-agent-frameworks-2026",
+})
+
+print(result)
+```
+
+---
+
+## What This Produces
+
+Running this crew gives you:
+
+1. Researched content from the analyst agent
+2. A polished HTML report from the writer agent  
+3. A PDF file saved locally from the publisher agent
+
+The `X-Credits-Remaining` header in the tool response lets agents monitor their own balance and top up via USDC if needed — no human intervention required.
+
+---
+
+## Using the MCP Server Instead
+
+If you're building in Claude Desktop or Cursor, you can skip the Python setup entirely. Add DocAPI's MCP server to your config:
+
+```json
+{
+  "mcpServers": {
+    "docapi": {
+      "url": "https://mcp.docapi.co/mcp"
+    }
+  }
+}
+```
+
+Then Claude can call `docapi_generate_pdf` directly.
+
+---
+
+## Full docs at [docapi.co/docs](https://docapi.co/docs)
