@@ -44,6 +44,45 @@ pdf = response.content`,
     ]
   ])
 );`,
+
+  agent: `from langchain.tools import tool
+import requests
+
+# Step 1: Agent self-registers (no email, no dashboard)
+reg = requests.post('https://api.docapi.co/api/register').json()
+api_key = reg['api_key']
+print(f"Credits remaining: {reg['credits']}")  # 10 free calls
+
+@tool
+def generate_pdf(html: str) -> bytes:
+    """Convert HTML to PDF. Returns raw PDF bytes."""
+    res = requests.post(
+        'https://api.docapi.co/v1/pdf',
+        headers={'x-api-key': api_key},
+        json={'html': html}
+    )
+    credits_left = res.headers.get('X-Credits-Remaining')
+    print(f"Credits remaining: {credits_left}")
+    return res.content
+
+# Step 2: Use in a LangChain agent
+from langchain_anthropic import ChatAnthropic
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+
+llm = ChatAnthropic(model='claude-3-5-sonnet-20241022')
+prompt = ChatPromptTemplate.from_messages([
+    ('system', 'You generate professional PDF reports.'),
+    ('human', '{input}'),
+    ('placeholder', '{agent_scratchpad}'),
+])
+
+agent = create_tool_calling_agent(llm, [generate_pdf], prompt)
+executor = AgentExecutor(agent=agent, tools=[generate_pdf])
+
+result = executor.invoke({
+    'input': 'Generate a Q4 market summary PDF for zip code 90210'
+})`,
 };
 
 type Language = keyof typeof examples;
@@ -53,6 +92,7 @@ const languageMap: Record<Language, string> = {
   node: "javascript",
   python: "python",
   php: "php",
+  agent: "python",
 };
 
 export function CodeExample() {
@@ -88,6 +128,11 @@ export function CodeExample() {
               <TabsTrigger value="node">Node.js</TabsTrigger>
               <TabsTrigger value="python">Python</TabsTrigger>
               <TabsTrigger value="php">PHP</TabsTrigger>
+              <TabsTrigger value="agent">
+                <span className="flex items-center gap-1.5">
+                  🤖 AI Agent
+                </span>
+              </TabsTrigger>
             </TabsList>
 
             <div className="relative">
@@ -134,7 +179,9 @@ export function CodeExample() {
                     </div>
                     <div className="border-t border-zinc-800 px-4 py-2">
                       <span className="text-xs text-zinc-500">
-                        → Returns PDF file (application/pdf)
+                        {lang === "agent"
+                          ? "→ Agent self-registers, generates PDFs, monitors credits autonomously"
+                          : "→ Returns PDF file (application/pdf)"}
                       </span>
                     </div>
                   </div>
