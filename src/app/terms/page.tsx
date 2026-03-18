@@ -194,7 +194,7 @@ export default function TermsPage() {
               <h3 className="font-semibold mb-2">5.1 How Credits Work</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Agent accounts registered via <code>POST /api/register</code> receive
-                10 free credits on registration. Additional credits are purchased by
+                3 free credits on registration (10 with a valid email address). Additional credits are purchased by
                 sending USDC (USD Coin) to the dedicated wallet address returned at
                 registration. The current rate is 50 credits per 1 USDC ($0.02 per
                 API call). Credits do not expire.

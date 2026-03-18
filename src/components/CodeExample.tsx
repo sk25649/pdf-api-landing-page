@@ -51,7 +51,7 @@ import requests
 # Step 1: Agent self-registers (no email, no dashboard)
 reg = requests.post('https://api.docapi.co/api/register').json()
 api_key = reg['api_key']
-print(f"Credits remaining: {reg['credits']}")  # 10 free calls
+print(f"Credits remaining: {reg['credits']}")  # 3 free calls (10 if email provided)
 
 @tool
 def generate_pdf(html: str) -> bytes:

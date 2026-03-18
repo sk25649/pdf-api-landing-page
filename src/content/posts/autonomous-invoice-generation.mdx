@@ -47,7 +47,7 @@ async function registerAgent(agentId: string): Promise<{ apiKey: string; usdcAdd
 On registration, the agent gets:
 - An API key (`pk_...`) for generating PDFs
 - A USDC wallet address on Base mainnet for topping up credits
-- 10 free credits to start
+- 3 free credits to start (10 with email)
 
 Store these in your agent's configuration or database. The agent uses the API key for all subsequent PDF requests.
 
@@ -382,4 +382,4 @@ npm install @docapi/sdk @anthropic-ai/sdk
 DOCAPI_KEY=pk_your_key_here
 ```
 
-Get a key at [docapi.co/signup](https://www.docapi.co/signup) — 10 free PDFs, no credit card required. Agents can self-register at `/api/register`.
+Get a key at [docapi.co/signup](https://www.docapi.co/signup) — 3 free calls to start (10 with email), no credit card required. Agents can self-register at `/api/register`.

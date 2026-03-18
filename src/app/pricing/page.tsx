@@ -141,7 +141,7 @@ export default async function PricingPage() {
               <ul className="space-y-2">
                 {[
                   "Register via POST /api/register — one request, no human steps",
-                  "10 free calls on registration to test before funding",
+                  "3 free calls on registration — 10 free with email",
                   "50 credits per 1 USDC ($0.02/call)",
                   "X-Credits-Remaining header on every response",
                   "Self-managing: software tops up automatically via Coinbase AgentKit",

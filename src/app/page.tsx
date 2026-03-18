@@ -46,7 +46,7 @@ export default function Home() {
               </div>
 
               <p className="text-sm text-muted-foreground">
-                Humans: 100 calls/month free. AI agents: 10 free calls via{" "}
+                Humans: 100 calls/month free. AI agents: 3 free calls to start (10 with email) via{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-xs">
                   POST /api/register
                 </code>
@@ -448,11 +448,11 @@ export default function Home() {
                   <Bot className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="mb-1 font-semibold">10 free calls on registration</h3>
+                  <h3 className="mb-1 font-semibold">3 free calls on registration — 10 free with email</h3>
                   <p className="text-sm text-muted-foreground">
-                    Test the API before committing to payment setup. Enough to
-                    validate output quality and integration correctness — then
-                    fund and go.
+                    Test the API before committing to payment setup. Provide
+                    your email at registration to unlock 10 free calls and
+                    validate integration correctness — then fund and go.
                   </p>
                 </div>
               </div>
@@ -482,7 +482,7 @@ export default function Home() {
                   <code>{`{
   `}<span className="text-green-400">&quot;api_key&quot;</span>{`: `}<span className="text-yellow-300">&quot;pk_4a7f2b9c...&quot;</span>{`,
   `}<span className="text-green-400">&quot;usdc_address&quot;</span>{`: `}<span className="text-yellow-300">&quot;0x2B984ee1...&quot;</span>{`,
-  `}<span className="text-green-400">&quot;free_calls&quot;</span>{`: `}<span className="text-purple-400">10</span>{`,
+  `}<span className="text-green-400">&quot;free_calls&quot;</span>{`: `}<span className="text-purple-400">3</span>{` `}<span className="text-zinc-500">/* 10 if email provided */</span>{`,
   `}<span className="text-green-400">&quot;credits_per_usdc&quot;</span>{`: `}<span className="text-purple-400">50</span>{`,
   `}<span className="text-green-400">&quot;network&quot;</span>{`: `}<span className="text-yellow-300">&quot;base-mainnet&quot;</span>{`,
   `}<span className="text-green-400">&quot;rate&quot;</span>{`: `}<span className="text-yellow-300">&quot;$0.02 per API call&quot;</span>{`,
