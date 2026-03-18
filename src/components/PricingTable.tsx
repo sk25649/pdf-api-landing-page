@@ -164,7 +164,7 @@ export function PricingTable() {
                 </p>
                 <ul className="grid gap-1.5 sm:grid-cols-2">
                   {[
-                    "10 free calls on registration",
+                    "3 free calls on registration — 10 free with email",
                     "50 credits per 1 USDC",
                     "No monthly commitment",
                     "Self-managing credit topup",

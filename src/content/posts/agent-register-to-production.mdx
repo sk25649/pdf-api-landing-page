@@ -77,7 +77,7 @@ The agent doesn't need to read the docs page. Everything is in the response.
 
 ## Minute 0–1: Make test calls with free credits
 
-10 free calls are available immediately. The agent can validate the API produces correct output before committing to payment setup:
+3 free calls are available immediately (10 if email was provided at registration). The agent can validate the API produces correct output before committing to payment setup:
 
 ```python
 import requests
@@ -123,7 +123,7 @@ curl https://api.docapi.co/v1/topup \
 {"credits": 510, "usdc_address": "0x...", "rate": "$0.02 per call (50 credits per USDC)"}
 ```
 
-510 credits: 10 free + 500 from the first topup.
+510 credits: 10 free (with email) + 500 from the first topup.
 
 ---
 
@@ -197,3 +197,4 @@ Give the agent the rate. Give it the payment address. Give it the threshold. Giv
 Don't make it figure out billing later. Don't make it come back to read docs after the first test call. Front-load everything the agent needs to build a production-grade service, and it will. The service will run for months or years without human intervention.
 
 That's the promise of agentic-first API design. One request, everything included, production-ready in five minutes.
+ction-ready in five minutes.

@@ -60,8 +60,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const hasEmail = !!body.email;
   const email = body.email ?? generateAgentEmail();
   const notifyEmail = body.notify_email;
+  const freeCredits = hasEmail ? 10 : 3;
 
   // Create Supabase auth user
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
     {
       user_id: userId,
       plan: "agent",
-      credits: 10,
+      credits: freeCredits,
       usdc_address: usdcAddress,
       notify_email: notifyEmail ?? null,
     },
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest) {
 
   const response: Record<string, unknown> = {
     api_key: apiKey,
-    free_calls: 10,
+    free_calls: freeCredits,
     usdc_address: usdcAddress,
     network: "base-mainnet",
     rate: "$0.02 per API call",

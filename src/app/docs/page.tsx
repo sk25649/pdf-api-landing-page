@@ -400,7 +400,7 @@ if (client.credits_remaining or 999) < 50:
 account = DocAPI.register(notify_email="ops@yourcompany.com")
 print(account["api_key"])       # "pk_..."
 print(account["usdc_address"])  # "0x..."
-print(account["free_calls"])    # 10`}
+print(account["free_calls"])    # 3 free calls (10 if email provided)`}
         />
 
         <h3>Error handling</h3>
