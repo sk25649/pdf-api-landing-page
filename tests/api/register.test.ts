@@ -106,15 +106,22 @@ describe('POST /api/register', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 201 with api_key and usdc_address on success', async () => {
+  it('returns 201 with api_key and usdc_address on success (no email = 3 credits)', async () => {
     const res = await POST(makeRequest())
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.api_key).toMatch(/^pk_/)
     expect(body.usdc_address).toBe('0xsmartabc123')
-    expect(body.free_calls).toBe(10)
+    expect(body.free_calls).toBe(3)
     expect(body.credits_per_usdc).toBe(50)
     expect(body.network).toBe('base-mainnet')
+  })
+
+  it('returns 10 free credits when email is provided', async () => {
+    const res = await POST(makeRequest({ email: 'dev@example.com' }))
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.free_calls).toBe(10)
   })
 
   it('includes notifications block when notify_email is provided', async () => {
@@ -191,8 +198,16 @@ describe('POST /api/register', () => {
     expect(smartCall.name.length).toBeLessThanOrEqual(36)
   })
 
-  it('upserts user_plans with agent plan and 10 free credits', async () => {
+  it('upserts user_plans with agent plan and 3 free credits when no email', async () => {
     await POST(makeRequest())
+    expect(mockUserPlansChain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ plan: 'agent', credits: 3, usdc_address: '0xsmartabc123' }),
+      expect.objectContaining({ onConflict: 'user_id' })
+    )
+  })
+
+  it('upserts user_plans with 10 free credits when email is provided', async () => {
+    await POST(makeRequest({ email: 'dev@example.com' }))
     expect(mockUserPlansChain.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ plan: 'agent', credits: 10, usdc_address: '0xsmartabc123' }),
       expect.objectContaining({ onConflict: 'user_id' })
