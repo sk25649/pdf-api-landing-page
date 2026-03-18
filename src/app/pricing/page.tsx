@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Pricing",
   description:
     "Simple, transparent pricing for Doc API. Human plans from $0–$99/month. AI agents pay $0.02/call with USDC — no monthly commitment, register via API.",
+  alternates: {
+    canonical: "https://www.docapi.co/pricing",
+  },
   openGraph: {
     title: "Pricing - Doc API",
     description:

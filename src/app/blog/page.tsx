@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Blog",
   description:
     "Learn about PDF generation, HTML to PDF conversion, and API best practices. Tips, tutorials, and updates from Doc API.",
+  alternates: {
+    canonical: "https://www.docapi.co/blog",
+  },
   openGraph: {
     title: "Blog - Doc API",
     description:

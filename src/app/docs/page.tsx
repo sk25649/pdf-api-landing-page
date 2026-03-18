@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "Documentation",
   description:
     "Complete API documentation for Doc API. Human signup via dashboard or programmatic agent registration via POST /api/register. Generate PDFs with USDC credits or monthly plans.",
+  alternates: {
+    canonical: "https://www.docapi.co/docs",
+  },
   openGraph: {
     title: "API Documentation - Doc API",
     description:
